@@ -1,0 +1,298 @@
+version: '3.8'
+
+services:
+  # ==================== 基础设施 ====================
+
+  # MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: enstud-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: enstud_app
+      TZ: Asia/Shanghai
+    ports:
+      - "${MYSQL_PORT:-13306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./sql:/docker-entrypoint-initdb.d:ro
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - enstud-network
+
+  # Redis
+  redis:
+    image: redis:7-alpine
+    container_name: enstud-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - enstud-network
+
+  # Nacos
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: enstud-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      JVM_XMS: 256m
+      JVM_XMX: 512m
+      JVM_XMN: 128m
+      PREFER_HOST_MODE: hostname
+      NACOS_AUTH_ENABLE: false
+    ports:
+      - "${NACOS_PORT:-8848}:8848"
+      - "${NACOS_GRPC_PORT:-9848}:9848"
+    volumes:
+      - nacos-data:/home/nacos/data
+      - nacos-logs:/home/nacos/logs
+    depends_on:
+      mysql:
+        condition: service_started
+    networks:
+      - enstud-network
+
+  # Elasticsearch
+  elasticsearch:
+    image: elasticsearch:8.11.0
+    container_name: enstud-es
+    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    networks:
+      - enstud-network
+
+  # ==================== 微服务 ====================
+
+  # 用户服务
+  user-service:
+    build:
+      context: .
+      dockerfile: enstud-user-service/Dockerfile
+    container_name: enstud-user-service
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    ports:
+      - "${USER_SERVICE_PORT:-8081}:8081"
+    depends_on:
+      nacos:
+        condition: service_started
+      mysql:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - enstud-network
+
+  # 单词服务
+  word-service:
+    build:
+      context: .
+      dockerfile: enstud-word-service/Dockerfile
+    container_name: enstud-word-service
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    ports:
+      - "${WORD_SERVICE_PORT:-8082}:8082"
+    depends_on:
+      nacos:
+        condition: service_started
+      mysql:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - enstud-network
+
+  # AI对话服务
+  chat-service:
+    build:
+      context: .
+      dockerfile: enstud-chat-service/Dockerfile
+    container_name: enstud-chat-service
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    ports:
+      - "${CHAT_SERVICE_PORT:-8083}:8083"
+    depends_on:
+      nacos:
+        condition: service_started
+      mysql:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - enstud-network
+
+  # 写作服务
+  writing-service:
+    build:
+      context: .
+      dockerfile: enstud-writing-service/Dockerfile
+    container_name: enstud-writing-service
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    ports:
+      - "${WRITING_SERVICE_PORT:-8084}:8084"
+    depends_on:
+      nacos:
+        condition: service_started
+      mysql:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - enstud-network
+
+  # 翻译服务
+  translate-service:
+    build:
+      context: .
+      dockerfile: enstud-translate-service/Dockerfile
+    container_name: enstud-translate-service
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    ports:
+      - "${TRANSLATE_SERVICE_PORT:-8085}:8085"
+    depends_on:
+      nacos:
+        condition: service_started
+      redis:
+        condition: service_started
+    networks:
+      - enstud-network
+
+  # 论坛服务
+  forum-service:
+    build:
+      context: .
+      dockerfile: enstud-forum-service/Dockerfile
+    container_name: enstud-forum-service
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    ports:
+      - "${FORUM_SERVICE_PORT:-8086}:8086"
+    depends_on:
+      nacos:
+        condition: service_started
+      mysql:
+        condition: service_started
+      redis:
+        condition: service_started
+      elasticsearch:
+        condition: service_started
+    networks:
+      - enstud-network
+
+  # API 网关（最后启动）
+  gateway:
+    build:
+      context: .
+      dockerfile: enstud-gateway/Dockerfile
+    container_name: enstud-gateway
+    restart: unless-stopped
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - NACOS_SERVER_ADDR=nacos
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      nacos:
+        condition: service_started
+      redis:
+        condition: service_started
+      user-service:
+        condition: service_started
+      word-service:
+        condition: service_started
+      chat-service:
+        condition: service_started
+      writing-service:
+        condition: service_started
+      translate-service:
+        condition: service_started
+      forum-service:
+        condition: service_started
+    networks:
+      - enstud-network
+
+  # Nginx 反向代理 + 前端静态服务
+  nginx:
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    container_name: enstud-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    depends_on:
+      gateway:
+        condition: service_started
+    networks:
+      - enstud-network
+
+# ==================== 网络和存储 ====================
+
+networks:
+  enstud-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+  redis-data:
+  nacos-data:
+  nacos-logs:
+  es-data:

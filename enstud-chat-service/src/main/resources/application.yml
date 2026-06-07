@@ -1,0 +1,33 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: enstud-chat-service
+  datasource:
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/enstud_app?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    username: ${MYSQL_USERNAME:root}
+    password: ${MYSQL_PASSWORD:root}
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
+logging:
+  level:
+    com.enstud.chat: DEBUG
+
+# AI 配置
+ai:
+  mock: false  # true=使用Mock客户端, false=使用DeepSeek真实客户端
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: https://api.deepseek.com
+  model: deepseek-chat
+  timeout: 60

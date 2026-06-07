@@ -1,0 +1,51 @@
+# Java
+*.class
+*.jar
+*.war
+*.ear
+*.log
+target/
+
+# Maven
+.mvn/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+.settings/
+.project
+.classpath
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+NUL
+
+# Environment
+.env
+.env.local
+
+# Logs
+logs/
+*.log
+
+# Temp files
+*.tmp
+*.bak
+
+# Legacy client directory (superseded by enstud-frontend)
+client/
+
+# Node (frontend)
+enstud-frontend/node_modules/
+enstud-frontend/dist/
+enstud-frontend/.vite/
+
+# Docker volumes
+mysql-data/
+redis-data/
+nacos-data/
+nacos-logs/

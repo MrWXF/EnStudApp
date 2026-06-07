@@ -1,0 +1,82 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: enstud-gateway
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+      config:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        namespace: ${NACOS_NAMESPACE:}
+        file-extension: yaml
+        refresh-enabled: true
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        # 用户服务
+        - id: user-service
+          uri: lb://enstud-user-service
+          predicates:
+            - Path=/user/**
+        # 单词服务
+        - id: word-service
+          uri: lb://enstud-word-service
+          predicates:
+            - Path=/word/**
+        # AI 对话服务
+        - id: chat-service
+          uri: lb://enstud-chat-service
+          predicates:
+            - Path=/chat/**
+        # 写作服务
+        - id: writing-service
+          uri: lb://enstud-writing-service
+          predicates:
+            - Path=/writing/**
+        # 翻译服务
+        - id: translate-service
+          uri: lb://enstud-translate-service
+          predicates:
+            - Path=/translate/**
+        # 论坛服务
+        - id: forum-service
+          uri: lb://enstud-forum-service
+          predicates:
+            - Path=/forum/**
+      # 全局 CORS 配置
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOriginPatterns: "*"
+            allowedMethods: "*"
+            allowedHeaders: "*"
+            allowCredentials: true
+            maxAge: 3600
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+# JWT 配置
+jwt:
+  secret: ${JWT_SECRET:enstud-app-jwt-secret-key-2024-production-must-change}
+
+# 不需要鉴权的路径（白名单）
+gateway:
+  white-list:
+    - /user/register
+    - /user/login
+    - /forum/posts
+    - /word/wordbooks
+
+# 日志
+logging:
+  level:
+    com.enstud.gateway: DEBUG
