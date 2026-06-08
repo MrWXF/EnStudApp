@@ -50,3 +50,19 @@ export const replyPost = (postId: number, content: string) =>
   api.post(`/forum/posts/${postId}/reply`, { content });
 export const toggleLike = (targetType: string, targetId: number) =>
   api.post('/forum/like', null, { params: { targetType, targetId } });
+
+// Reading
+export const getHotArticles = (source = 'all') =>
+  api.get('/read/hot', { params: { source } });
+export const getArticleDetail = (articleId: number) =>
+  api.get(`/read/${articleId}`);
+export const getArticleTranslation = (articleId: number) =>
+  api.get(`/read/${articleId}/translate`);
+export const toggleBookmark = (articleId: number) =>
+  api.post(`/read/${articleId}/bookmark`);
+export const getBookmarks = () =>
+  api.get('/read/bookmarks');
+export const getSources = () =>
+  api.get('/read/sources');
+export const syncArticles = () =>
+  api.post('/read/sync');

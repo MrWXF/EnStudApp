@@ -11,6 +11,8 @@ import TranslatePage from './pages/TranslatePage';
 import ForumPage from './pages/ForumPage';
 import ForumDetailPage from './pages/ForumDetailPage';
 import CreatePostPage from './pages/CreatePostPage';
+import ReadPage from './pages/ReadPage';
+import ReadDetailPage from './pages/ReadDetailPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token');
@@ -32,6 +34,8 @@ export default function App() {
             <Route path="forum" element={<ForumPage />} />
             <Route path="forum/:id" element={<ForumDetailPage />} />
             <Route path="forum/new" element={<CreatePostPage />} />
+            <Route path="read" element={<ReadPage />} />
+            <Route path="read/:id" element={<ReadDetailPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

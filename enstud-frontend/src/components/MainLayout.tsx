@@ -3,6 +3,7 @@ import { Layout, Menu, Button, Avatar, Dropdown } from 'antd';
 import {
   HomeOutlined, BookOutlined, MessageOutlined, EditOutlined,
   TranslationOutlined, TeamOutlined, LogoutOutlined, UserOutlined,
+  ReadOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -13,6 +14,7 @@ const menuItems = [
   { key: '/chat', icon: <MessageOutlined />, label: 'AI 对话' },
   { key: '/writing', icon: <EditOutlined />, label: '写作练习' },
   { key: '/translate', icon: <TranslationOutlined />, label: '翻译工具' },
+  { key: '/read', icon: <ReadOutlined />, label: '热门阅读' },
   { key: '/forum', icon: <TeamOutlined />, label: '学习论坛' },
 ];
 

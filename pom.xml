@@ -35,6 +35,8 @@
         <module>enstud-translate-service</module>
         <!-- 论坛服务 -->
         <module>enstud-forum-service</module>
+        <!-- 阅读服务 -->
+        <module>enstud-read-service</module>
     </modules>
 
     <properties>
