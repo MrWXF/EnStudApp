@@ -1,10 +1,12 @@
 package com.enstud.word.algorithm;
 
+import com.enstud.common.enums.MemoryLevel;
 import com.enstud.word.entity.UserWordRecord;
 
 /**
  * SM-2 记忆算法实现
  * 根据用户答题质量动态调整复习间隔和难度系数
+ * 并计算直观的记忆等级（0-5 级）
  */
 public class Sm2Algorithm {
 
@@ -50,6 +52,10 @@ public class Sm2Algorithm {
         } else {
             record.setStatus("LEARNING");
         }
+
+        // 计算记忆等级（新增）
+        MemoryLevel ml = MemoryLevel.calcFromMastery(mastery, record.getRepetitions(), record.getStatus(), quality);
+        record.setMemoryLevel(ml.level);
 
         // 设置下次复习时间（当前时间 + interval 天）
         record.setNextReviewTime(

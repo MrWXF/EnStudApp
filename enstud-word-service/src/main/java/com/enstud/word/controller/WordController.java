@@ -2,17 +2,20 @@ package com.enstud.word.controller;
 
 import com.enstud.common.Result;
 import com.enstud.common.SecurityContext;
+import com.enstud.word.dto.AdjustMemoryLevelRequest;
+import com.enstud.word.dto.MemoryLevelDistributionDTO;
 import com.enstud.word.dto.WordCardDTO;
 import com.enstud.word.dto.WordbookDTO;
 import com.enstud.word.service.WordService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "单词学习", description = "词库管理、单词学习、记忆复习")
+@Tag(name = "单词学习", description = "词库管理、单词学习、记忆复习、记忆等级")
 @RestController
 @RequestMapping("/word")
 @RequiredArgsConstructor
@@ -54,6 +57,35 @@ public class WordController {
         Long userId = SecurityContext.getCurrentUserId();
         if (userId == null) return Result.fail(401, "请先登录");
         wordService.submitReview(userId, wordId, quality);
+        return Result.success();
+    }
+
+    @Operation(summary = "获取记忆等级分布统计")
+    @GetMapping("/memory-level/distribution")
+    public Result<MemoryLevelDistributionDTO> getMemoryLevelDistribution() {
+        Long userId = SecurityContext.getCurrentUserId();
+        if (userId == null) return Result.fail(401, "请先登录");
+        return Result.success(wordService.getMemoryLevelDistribution(userId));
+    }
+
+    @Operation(summary = "按记忆等级筛选单词")
+    @GetMapping("/memory-level/words")
+    public Result<List<WordCardDTO>> getWordsByMemoryLevel(
+            @RequestParam(defaultValue = "0") Integer memoryLevel,
+            @RequestParam(required = false) Long wordbookId,
+            @RequestParam(required = false) String cursor,
+            @RequestParam(defaultValue = "20") int limit) {
+        Long userId = SecurityContext.getCurrentUserId();
+        if (userId == null) return Result.fail(401, "请先登录");
+        return Result.success(wordService.getWordsByMemoryLevel(userId, wordbookId, memoryLevel, cursor, limit));
+    }
+
+    @Operation(summary = "手动调整单词记忆等级")
+    @PutMapping("/memory-level/adjust")
+    public Result<Void> adjustMemoryLevel(@Valid @RequestBody AdjustMemoryLevelRequest request) {
+        Long userId = SecurityContext.getCurrentUserId();
+        if (userId == null) return Result.fail(401, "请先登录");
+        wordService.adjustMemoryLevel(userId, request.wordId(), request.targetLevel());
         return Result.success();
     }
 }

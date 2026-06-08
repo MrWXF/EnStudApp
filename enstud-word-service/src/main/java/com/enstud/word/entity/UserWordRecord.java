@@ -21,6 +21,7 @@ public class UserWordRecord {
     private Integer quality;
     private Integer masteryLevel;
     private String status;
+    private Integer memoryLevel;
     private LocalDateTime nextReviewTime;
     private LocalDateTime lastReviewTime;
 
