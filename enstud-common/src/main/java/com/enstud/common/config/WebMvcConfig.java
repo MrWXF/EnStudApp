@@ -1,5 +1,6 @@
 package com.enstud.common.config;
 
+import com.enstud.common.AuthRequiredInterceptor;
 import com.enstud.common.SecurityContextInterceptor;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -24,7 +25,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // 清理 SecurityContext（必须最后执行）
         registry.addInterceptor(new SecurityContextInterceptor())
+                .addPathPatterns("/**");
+
+        // 用户认证拦截器（在请求到达 Controller 前检查登录）
+        registry.addInterceptor(new AuthRequiredInterceptor())
                 .addPathPatterns("/**");
     }
 }

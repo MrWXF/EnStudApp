@@ -36,10 +36,12 @@ public enum MemoryLevel {
     /**
      * 根据 masteryLevel 和记忆状态计算记忆等级
      */
-    public static MemoryLevel calcFromMastery(int mastery, int repetitions, String status, int quality) {
+    public static MemoryLevel calcFromMastery(int mastery, int repetitions, String status, int qualityVal) {
+        // 参数安全兜底
+        if (status == null) status = "";
         // 刚答错或质量很差时，等级不应该虚高
-        if (repetitions == 0 && quality > 0 && quality < 3) return FUZZY;
-        if (repetitions == 0 && quality == 0) return NOT_LEARNED;
+        if (repetitions == 0 && qualityVal > 0 && qualityVal < 3) return FUZZY;
+        if (repetitions == 0 && qualityVal == 0) return NOT_LEARNED;
 
         if ("MASTERED".equals(status) && mastery >= 90) return MASTERED;
         if (mastery >= 61) return PROFICIENT;
@@ -54,5 +56,17 @@ public enum MemoryLevel {
      */
     public static MemoryLevel calcFromMastery(int mastery, int repetitions, String status) {
         return calcFromMastery(mastery, repetitions, status, -1);
+    }
+
+    /**
+     * 安全地从字符串解析记忆等级，解析失败返回 NOT_LEARNED
+     */
+    public static MemoryLevel safeValueOf(String name) {
+        if (name == null || name.isBlank()) return NOT_LEARNED;
+        try {
+            return valueOf(name.toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return NOT_LEARNED;
+        }
     }
 }

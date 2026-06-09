@@ -3,28 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Form, Input, Button, Select, Space, message } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { createPost, getCategories } from '../api';
+import type { ForumCategory, ForumPost, ApiResponse } from '../types';
 
 const { TextArea } = Input;
 
 export default function CreatePostPage() {
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<ForumCategory[]>([]);
   const [loading, setLoading] = useState(false);
   const [form] = Form.useForm();
   const navigate = useNavigate();
 
   useEffect(() => {
-    getCategories().then((res: any) => setCategories(res.data || []));
+    getCategories().then((res: ApiResponse<ForumCategory[]>) => setCategories(res.data || []));
   }, []);
 
-  const handleSubmit = async (values: any) => {
+  const handleSubmit = async (values: { title: string; content: string; categoryId: number; tags?: string }) => {
     setLoading(true);
     try {
-      const res: any = await createPost({
-        title: values.title,
-        content: values.content,
-        categoryId: values.categoryId,
-        tags: values.tags,
-      });
+      const res: ApiResponse<ForumPost> = await createPost(values);
       message.success('发帖成功');
       navigate(`/forum/${res.data.id}`);
     } catch {
@@ -51,7 +47,7 @@ export default function CreatePostPage() {
           <Form.Item name="categoryId" label="板块" rules={[{ required: true, message: '请选择板块' }]}>
             <Select
               placeholder="请选择板块"
-              options={categories.map((c: any) => ({ label: c.name, value: c.id }))}
+              options={categories.map((c) => ({ label: c.name, value: c.id }))}
             />
           </Form.Item>
 

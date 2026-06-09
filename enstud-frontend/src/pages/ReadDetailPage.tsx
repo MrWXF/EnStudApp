@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  Card, Spin, Typography, Button, Tag, Space, Divider, message,
-  Tooltip, Row, Col, Segmented, Skeleton, Drawer, Input,
+  Card, Typography, Button, Tag, Space, Divider, message,
+  Row, Col, Segmented, Skeleton, Drawer,
 } from 'antd';
 import {
   ArrowLeftOutlined, StarOutlined, StarFilled,
@@ -13,34 +13,15 @@ import {
   getArticleDetail, getArticleTranslation,
   toggleBookmark,
 } from '../api';
+import type { ArticleDetailDTO, ApiResponse } from '../types';
 
 const { Title, Paragraph, Text } = Typography;
-const { TextArea } = Input;
 
-interface ArticleDetail {
-  id: number;
-  title: string;
-  titleCn: string | null;
-  url: string;
-  source: string;
-  sourceIcon: string | null;
-  author: string | null;
-  coverUrl: string | null;
-  content: string | null;
-  contentCn: string | null;
-  summary: string | null;
-  summaryCn: string | null;
-  score: number;
-  sourceScore: number | null;
-  publishedAt: string | null;
-}
-
-const activeWordSet = new Set<string>(); // 模拟高亮单词
 
 export default function ReadDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [article, setArticle] = useState<ArticleDetail | null>(null);
+  const [article, setArticle] = useState<ArticleDetailDTO | null>(null);
   const [loading, setLoading] = useState(true);
   const [translating, setTranslating] = useState(false);
   const [translated, setTranslated] = useState(false);
@@ -57,8 +38,8 @@ export default function ReadDetailPage() {
   const loadArticle = async (articleId: number) => {
     setLoading(true);
     try {
-      const res = await getArticleDetail(articleId);
-      const data = res.data?.data;
+      const res: ApiResponse<ArticleDetailDTO> = await getArticleDetail(articleId);
+      const data = res.data;
       setArticle(data);
       setBookmarked(data?.bookmarked ?? false);
     } catch {
@@ -72,8 +53,8 @@ export default function ReadDetailPage() {
     if (!id) return;
     setTranslating(true);
     try {
-      const res = await getArticleTranslation(parseInt(id));
-      setArticle(res.data?.data);
+      const res: ApiResponse<ArticleDetailDTO> = await getArticleTranslation(parseInt(id));
+      setArticle(res.data);
       setTranslated(true);
       message.success('翻译完成');
     } catch {
@@ -86,9 +67,10 @@ export default function ReadDetailPage() {
   const handleBookmark = async () => {
     if (!id) return;
     try {
-      const res = await toggleBookmark(parseInt(id));
-      setBookmarked(res.data?.data);
-      message.success(res.data?.data ? '已收藏' : '已取消收藏');
+      const res: ApiResponse<boolean> = await toggleBookmark(parseInt(id));
+      const newBookmarked = res.data;
+      setBookmarked(newBookmarked);
+      message.success(newBookmarked ? '已收藏' : '已取消收藏');
     } catch {
       message.error('操作失败');
     }
@@ -152,9 +134,9 @@ export default function ReadDetailPage() {
                 返回
               </Button>
               <Tag color="orange">{article.source}</Tag>
-              {article.sourceScore != null && (
+              {article.score != null && (
                 <Text type="secondary">
-                  <FireOutlined /> {article.sourceScore.toLocaleString()}
+                  <FireOutlined /> {article.score.toLocaleString()}
                 </Text>
               )}
             </Space>

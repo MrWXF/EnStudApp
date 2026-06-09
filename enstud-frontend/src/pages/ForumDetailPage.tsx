@@ -5,10 +5,11 @@ import { LikeOutlined, LikeFilled, ArrowLeftOutlined, DeleteOutlined, UserOutlin
 import { getPostDetail, replyPost, toggleLike, deletePost } from '../api';
 import { formatRelativeTime, formatDateTime } from '../utils/format';
 import { getCurrentUserId, getUserAvatar } from '../utils/user';
+import type { PostDetail, ForumReply, ApiResponse } from '../types';
 
 export default function ForumDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [post, setPost] = useState<any>(null);
+  const [post, setPost] = useState<PostDetail | null>(null);
   const [reply, setReply] = useState('');
   const [liked, setLiked] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,7 @@ export default function ForumDetailPage() {
   const loadPost = async () => {
     setLoading(true);
     try {
-      const res: any = await getPostDetail(Number(id));
+      const res: ApiResponse<PostDetail> = await getPostDetail(Number(id));
       setPost(res.data);
     } catch {
       // 错误已在 client 统一处理
@@ -76,6 +77,39 @@ export default function ForumDetailPage() {
 
   const isAuthor = currentUserId === post.authorId;
 
+  const renderReplyItem = (r: ForumReply) => (
+    <List.Item
+      style={{ padding: '12px 0' }}
+      actions={[
+        <Tooltip key="like" title="点赞">
+          <Button
+            type="text"
+            size="small"
+            icon={<LikeOutlined />}
+            onClick={() => handleReplyLike(r.id)}
+          >
+            {r.likeCount || 0}
+          </Button>
+        </Tooltip>,
+      ]}
+    >
+      <List.Item.Meta
+        avatar={
+          <Avatar size="small" style={{ backgroundColor: '#87d068' }}>
+            {getUserAvatar(r.authorName)}
+          </Avatar>
+        }
+        title={r.authorName || `用户${r.authorId}`}
+        description={
+          <>
+            <div style={{ lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{r.content}</div>
+            <div style={{ fontSize: 12, color: '#ccc', marginTop: 4 }}>{formatRelativeTime(r.createdAt)}</div>
+          </>
+        }
+      />
+    </List.Item>
+  );
+
   return (
     <div style={{ maxWidth: 800 }}>
       <Space style={{ marginBottom: 16 }}>
@@ -89,7 +123,7 @@ export default function ForumDetailPage() {
 
       {/* 帖子内容 */}
       <Card>
-        <div style={{ display: 'flex, alignItems: center', marginBottom: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
           <Avatar
             icon={<UserOutlined />}
             style={{ backgroundColor: '#1677ff', marginRight: 12, width: 40, height: 40, fontSize: 18 }}
@@ -106,7 +140,7 @@ export default function ForumDetailPage() {
 
         {post.tags && (
           <div style={{ marginBottom: 12 }}>
-            {post.tags.split(',').filter(Boolean).map((t: string, i: number) => (
+            {post.tags.split(',').filter(Boolean).map((t, i) => (
               <Tag key={i} color="blue" style={{ borderRadius: 12 }}>#{t.trim()}</Tag>
             ))}
           </div>
@@ -138,35 +172,7 @@ export default function ForumDetailPage() {
         {post.replies && post.replies.length > 0 ? (
           <List
             dataSource={post.replies}
-            renderItem={(r: any) => (
-              <List.Item style={{ padding: '12px 0' }} actions={[
-                <Tooltip key="like" title="点赞">
-                  <Button
-                    type="text"
-                    size="small"
-                    icon={<LikeOutlined />}
-                    onClick={() => handleReplyLike(r.id)}
-                  >
-                    {r.likeCount || 0}
-                  </Button>
-                </Tooltip>
-              ]}>
-                <List.Item.Meta
-                  avatar={
-                    <Avatar size="small" style={{ backgroundColor: '#87d068' }}>
-                      {getUserAvatar(r.authorName)}
-                    </Avatar>
-                  }
-                  title={r.authorName || `用户${r.authorId}`}
-                  description={
-                    <>
-                      <div style={{ lineHeight: 1.8, whiteSpace: 'pre-wrap' }}>{r.content}</div>
-                      <div style={{ fontSize: 12, color: '#ccc', marginTop: 4 }}>{formatRelativeTime(r.createdAt)}</div>
-                    </>
-                  }
-                />
-              </List.Item>
-            )}
+            renderItem={renderReplyItem}
           />
         ) : (
           <div style={{ textAlign: 'center', color: '#8c8c8c', padding: 32 }}>暂无回复，快来抢沙发吧</div>

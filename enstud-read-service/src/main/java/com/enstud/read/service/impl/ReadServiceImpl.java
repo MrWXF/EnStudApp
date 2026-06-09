@@ -8,8 +8,8 @@ import com.enstud.read.entity.ArticleReadRecord;
 import com.enstud.read.mapper.ArticleMapper;
 import com.enstud.read.mapper.ArticleReadRecordMapper;
 import com.enstud.read.service.ReadService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,21 +19,13 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class ReadServiceImpl implements ReadService {
-
-    private static final Logger log = LoggerFactory.getLogger(ReadServiceImpl.class);
 
     private final ArticleMapper articleMapper;
     private final ArticleReadRecordMapper readRecordMapper;
     private final ArticleAggregator articleAggregator;
-
-    public ReadServiceImpl(ArticleMapper articleMapper,
-                           ArticleReadRecordMapper readRecordMapper,
-                           ArticleAggregator articleAggregator) {
-        this.articleMapper = articleMapper;
-        this.readRecordMapper = readRecordMapper;
-        this.articleAggregator = articleAggregator;
-    }
 
     @Override
     public List<ArticleDTO> getHotArticles(Long userId, String source) {

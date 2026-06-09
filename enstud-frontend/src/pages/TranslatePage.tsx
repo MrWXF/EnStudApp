@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, Input, Button, Select, Spin, message } from 'antd';
 import { SwapOutlined } from '@ant-design/icons';
 import { translateText } from '../api';
+import type { ApiResponse, TranslateResponse } from '../types';
 
 const { TextArea } = Input;
 
@@ -16,10 +17,17 @@ export default function TranslatePage() {
     if (!text.trim()) return;
     setLoading(true);
     try {
-      const res: any = await translateText({ text, from: from === 'auto' ? undefined : from, to });
+      const res: ApiResponse<TranslateResponse> = await translateText({
+        text,
+        from: from === 'auto' ? undefined : from,
+        to,
+      });
       setResult(res.data.translatedText);
-    } catch { message.error('翻译失败'); }
-    finally { setLoading(false); }
+    } catch {
+      message.error('翻译失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSwap = () => {

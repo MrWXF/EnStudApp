@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Form, Input, Button, Tabs, message } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { login, register } from '../api';
+import type { ApiResponse, LoginResult } from '../types';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -11,14 +12,20 @@ export default function LoginPage() {
   const handleLogin = async (values: { username: string; password: string }) => {
     setLoading(true);
     try {
-      const res: any = await login(values);
+      const res: ApiResponse<LoginResult> = await login(values);
       localStorage.setItem('token', res.data.accessToken);
-      localStorage.setItem('user', JSON.stringify({ username: res.data.username, nickname: res.data.nickname, userId: res.data.userId }));
+      localStorage.setItem('user', JSON.stringify({
+        username: res.data.username,
+        nickname: res.data.nickname,
+        userId: res.data.userId,
+      }));
       message.success('登录成功');
       navigate('/');
-    } catch (e: any) {
-      message.error(e?.msg || '登录失败');
-    } finally { setLoading(false); }
+    } catch (err: unknown) {
+      message.error((err as { msg?: string })?.msg || '登录失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleRegister = async (values: { username: string; password: string; email: string }) => {
@@ -26,9 +33,11 @@ export default function LoginPage() {
     try {
       await register(values);
       message.success('注册成功，请登录');
-    } catch (e: any) {
-      message.error(e?.msg || '注册失败');
-    } finally { setLoading(false); }
+    } catch (err: unknown) {
+      message.error((err as { msg?: string })?.msg || '注册失败');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

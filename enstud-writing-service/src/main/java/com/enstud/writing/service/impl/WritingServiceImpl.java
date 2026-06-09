@@ -12,8 +12,7 @@ import com.enstud.writing.service.WritingService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,9 +20,8 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WritingServiceImpl implements WritingService {
-
-    private static final Logger log = LoggerFactory.getLogger(WritingServiceImpl.class);
 
     private final WritingMapper writingMapper;
     private final WritingAiClient aiClient;

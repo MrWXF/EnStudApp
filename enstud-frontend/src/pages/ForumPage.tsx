@@ -5,10 +5,11 @@ import { EyeOutlined, LikeOutlined, MessageOutlined, PlusOutlined, SearchOutline
 import { getCategories, getPosts } from '../api';
 import { formatRelativeTime } from '../utils/format';
 import { getUserAvatar } from '../utils/user';
+import type { ForumCategory, ForumPost, ApiResponse } from '../types';
 
 export default function ForumPage() {
-  const [categories, setCategories] = useState<any[]>([]);
-  const [posts, setPosts] = useState<any[]>([]);
+  const [categories, setCategories] = useState<ForumCategory[]>([]);
+  const [posts, setPosts] = useState<ForumPost[]>([]);
   const [catId, setCatId] = useState<number | undefined>();
   const [cursor, setCursor] = useState<string | undefined>();
   const [loading, setLoading] = useState(false);
@@ -17,12 +18,14 @@ export default function ForumPage() {
   const [searchText, setSearchText] = useState('');
   const navigate = useNavigate();
 
-  useEffect(() => { getCategories().then((res: any) => setCategories(res.data || [])); }, []);
+  useEffect(() => {
+    getCategories().then((res: ApiResponse<ForumCategory[]>) => setCategories(res.data || []));
+  }, []);
 
   const loadPosts = useCallback(async (catIdVal?: number, cursorVal?: string) => {
     setLoading(true);
     try {
-      const res: any = await getPosts(catIdVal, cursorVal);
+      const res: ApiResponse<ForumPost[]> = await getPosts(catIdVal, cursorVal);
       const list = res.data || [];
       if (cursorVal) {
         setPosts(prev => [...prev, ...list]);
@@ -52,7 +55,7 @@ export default function ForumPage() {
     if (loadingMore || !hasMore || !cursor) return;
     setLoadingMore(true);
     try {
-      const res: any = await getPosts(catId, cursor);
+      const res: ApiResponse<ForumPost[]> = await getPosts(catId, cursor);
       const list = res.data || [];
       setPosts(prev => [...prev, ...list]);
       setHasMore(list.length >= 20);
@@ -70,8 +73,49 @@ export default function ForumPage() {
 
   // 前端本地搜索过滤
   const filteredPosts = searchText.trim()
-    ? posts.filter(p => p.title.toLowerCase().includes(searchText.toLowerCase()) || (p.summary || '').toLowerCase().includes(searchText.toLowerCase()))
+    ? posts.filter(p =>
+        p.title.toLowerCase().includes(searchText.toLowerCase()) ||
+        (p.content || '').toLowerCase().includes(searchText.toLowerCase())
+      )
     : posts;
+
+  const renderPostItem = (p: ForumPost) => (
+    <List.Item
+      style={{ cursor: 'pointer', padding: '16px 0' }}
+      onClick={() => navigate(`/forum/${p.id}`)}
+      actions={[
+        <span key="view"><EyeOutlined /> {p.viewCount || 0}</span>,
+        <span key="like"><LikeOutlined /> {p.likeCount || 0}</span>,
+        <span key="reply"><MessageOutlined /> {p.replyCount || 0}</span>,
+      ]}
+    >
+      <List.Item.Meta
+        avatar={<Avatar style={{ backgroundColor: '#1677ff' }}>{getUserAvatar(p.authorName)}</Avatar>}
+        title={
+          <Space>
+            {p.isPinned && <Tag color="red">置顶</Tag>}
+            {p.isEssence && <Tag color="gold">精华</Tag>}
+            <span style={{ fontSize: 16 }}>{p.title}</span>
+          </Space>
+        }
+        description={
+          <Space split={<span style={{ color: '#d9d9d9' }}>·</span>}>
+            <span style={{ color: '#1677ff' }}>{p.authorName || '匿名用户'}</span>
+            <Tag>{p.categoryName}</Tag>
+            <span style={{ color: '#8c8c8c' }}>{formatRelativeTime(p.createdAt)}</span>
+          </Space>
+        }
+      />
+      <div style={{ color: '#666', lineHeight: 1.6, paddingLeft: 44 }}>{p.content}</div>
+      {p.tags && (
+        <div style={{ paddingLeft: 44, marginTop: 8 }}>
+          {p.tags.split(',').filter(Boolean).map((t, i) => (
+            <Tag key={i} style={{ borderRadius: 12 }}>#{t.trim()}</Tag>
+          ))}
+        </div>
+      )}
+    </List.Item>
+  );
 
   return (
     <Card
@@ -82,7 +126,7 @@ export default function ForumPage() {
       <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <Space wrap>
           <Button type={!catId ? 'primary' : 'default'} onClick={() => setCatId(undefined)}>全部</Button>
-          {categories.map((c: any) => (
+          {categories.map((c) => (
             <Button key={c.id} type={catId === c.id ? 'primary' : 'default'} onClick={() => setCatId(c.id)}>
               {c.icon && <span style={{ marginRight: 4 }}>{c.icon}</span>}{c.name}
             </Button>
@@ -106,43 +150,7 @@ export default function ForumPage() {
           <List
             dataSource={filteredPosts}
             itemLayout="vertical"
-            renderItem={(p: any) => (
-              <List.Item
-                style={{ cursor: 'pointer', padding: '16px 0' }}
-                onClick={() => navigate(`/forum/${p.id}`)}
-                actions={[
-                  <span key="view"><EyeOutlined /> {p.viewCount || 0}</span>,
-                  <span key="like"><LikeOutlined /> {p.likeCount || 0}</span>,
-                  <span key="reply"><MessageOutlined /> {p.replyCount || 0}</span>,
-                ]}
-              >
-                <List.Item.Meta
-                  avatar={<Avatar style={{ backgroundColor: '#1677ff' }}>{getUserAvatar(p.authorName)}</Avatar>}
-                  title={
-                    <Space>
-                      {p.isPinned && <Tag color="red">置顶</Tag>}
-                      {p.isEssence && <Tag color="gold">精华</Tag>}
-                      <span style={{ fontSize: 16 }}>{p.title}</span>
-                    </Space>
-                  }
-                  description={
-                    <Space split={<span style={{ color: '#d9d9d9' }}>·</span>}>
-                      <span style={{ color: '#1677ff' }}>{p.authorName || '匿名用户'}</span>
-                      <Tag>{p.categoryName}</Tag>
-                      <span style={{ color: '#8c8c8c' }}>{formatRelativeTime(p.createdAt)}</span>
-                    </Space>
-                  }
-                />
-                <div style={{ color: '#666', lineHeight: 1.6, paddingLeft: 44 }}>{p.summary}</div>
-                {p.tags && (
-                  <div style={{ paddingLeft: 44, marginTop: 8 }}>
-                    {p.tags.split(',').filter(Boolean).map((t: string, i: number) => (
-                      <Tag key={i} style={{ borderRadius: 12 }}>#{t.trim()}</Tag>
-                    ))}
-                  </div>
-                )}
-              </List.Item>
-            )}
+            renderItem={renderPostItem}
           />
         )}
       </Spin>

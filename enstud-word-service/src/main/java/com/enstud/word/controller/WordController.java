@@ -1,5 +1,6 @@
 package com.enstud.word.controller;
 
+import com.enstud.common.AuthRequired;
 import com.enstud.common.Result;
 import com.enstud.common.SecurityContext;
 import com.enstud.word.dto.AdjustMemoryLevelRequest;
@@ -19,6 +20,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/word")
 @RequiredArgsConstructor
+@AuthRequired
 public class WordController {
 
     private final WordService wordService;
@@ -45,7 +47,6 @@ public class WordController {
             @RequestParam Long wordbookId,
             @RequestParam(defaultValue = "10") int limit) {
         Long userId = SecurityContext.getCurrentUserId();
-        if (userId == null) return Result.fail(401, "请先登录");
         return Result.success(wordService.getWordsForStudy(userId, wordbookId, limit));
     }
 
@@ -55,7 +56,6 @@ public class WordController {
             @RequestParam Long wordId,
             @RequestParam int quality) {
         Long userId = SecurityContext.getCurrentUserId();
-        if (userId == null) return Result.fail(401, "请先登录");
         wordService.submitReview(userId, wordId, quality);
         return Result.success();
     }
@@ -64,7 +64,6 @@ public class WordController {
     @GetMapping("/memory-level/distribution")
     public Result<MemoryLevelDistributionDTO> getMemoryLevelDistribution() {
         Long userId = SecurityContext.getCurrentUserId();
-        if (userId == null) return Result.fail(401, "请先登录");
         return Result.success(wordService.getMemoryLevelDistribution(userId));
     }
 
@@ -76,7 +75,6 @@ public class WordController {
             @RequestParam(required = false) String cursor,
             @RequestParam(defaultValue = "20") int limit) {
         Long userId = SecurityContext.getCurrentUserId();
-        if (userId == null) return Result.fail(401, "请先登录");
         return Result.success(wordService.getWordsByMemoryLevel(userId, wordbookId, memoryLevel, cursor, limit));
     }
 
@@ -84,7 +82,6 @@ public class WordController {
     @PutMapping("/memory-level/adjust")
     public Result<Void> adjustMemoryLevel(@Valid @RequestBody AdjustMemoryLevelRequest request) {
         Long userId = SecurityContext.getCurrentUserId();
-        if (userId == null) return Result.fail(401, "请先登录");
         wordService.adjustMemoryLevel(userId, request.wordId(), request.targetLevel());
         return Result.success();
     }

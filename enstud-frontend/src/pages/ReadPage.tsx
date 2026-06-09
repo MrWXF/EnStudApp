@@ -12,31 +12,9 @@ import {
   getHotArticles, getSources, getBookmarks,
   toggleBookmark, syncArticles,
 } from '../api';
+import type { ArticleDTO, SourceDTO } from '../types';
 
-const { Text, Title, Paragraph } = Typography;
-
-interface Article {
-  id: number;
-  title: string;
-  titleCn: string | null;
-  url: string;
-  source: string;
-  sourceIcon: string | null;
-  summary: string | null;
-  summaryCn: string | null;
-  coverUrl: string | null;
-  author: string | null;
-  score: number;
-  publishedAt: string | null;
-  bookmarked: boolean;
-}
-
-interface Source {
-  id: string;
-  name: string;
-  icon: string | null;
-  count: number;
-}
+const { Text, Title } = Typography;
 
 const sourceColors: Record<string, string> = {
   HN: 'orange',
@@ -45,21 +23,14 @@ const sourceColors: Record<string, string> = {
   InfoQ: 'blue',
 };
 
-const sourceLabels: Record<string, string> = {
-  HN: 'Hacker News',
-  GitHub: 'GitHub',
-  Medium: 'Medium',
-  InfoQ: 'InfoQ',
-};
-
 export default function ReadPage() {
   const navigate = useNavigate();
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [sources, setSources] = useState<Source[]>([]);
+  const [articles, setArticles] = useState<ArticleDTO[]>([]);
+  const [sources, setSources] = useState<SourceDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [activeSource, setActiveSource] = useState('all');
-  const [activeTab, setActiveTab] = useState('hot');
+  const [activeTab, setActiveTab] = useState<string>('hot');
 
   useEffect(() => {
     loadSources();
@@ -69,7 +40,7 @@ export default function ReadPage() {
   const loadSources = async () => {
     try {
       const res = await getSources();
-      setSources(res.data?.data || []);
+      setSources(res.data || []);
     } catch {
       // ignore
     }
@@ -80,10 +51,10 @@ export default function ReadPage() {
     try {
       if (activeTab === 'bookmarks') {
         const res = await getBookmarks();
-        setArticles(res.data?.data || []);
+        setArticles(res.data || []);
       } else {
         const res = await getHotArticles(source);
-        setArticles(res.data?.data || []);
+        setArticles(res.data || []);
       }
     } catch (e) {
       console.error('Failed to load articles', e);
@@ -99,17 +70,13 @@ export default function ReadPage() {
 
   const handleTabChange = (tab: string) => {
     setActiveTab(tab);
-    if (tab === 'bookmarks') {
-      loadArticles(activeSource);
-    } else {
-      loadArticles(activeSource);
-    }
+    loadArticles(activeSource);
   };
 
   const handleBookmark = async (articleId: number) => {
     try {
       const res = await toggleBookmark(articleId);
-      const newBookmarked = res.data?.data;
+      const newBookmarked = res.data;
       setArticles(prev =>
         prev.map(a => a.id === articleId ? { ...a, bookmarked: newBookmarked } : a)
       );
@@ -123,7 +90,7 @@ export default function ReadPage() {
     setSyncing(true);
     try {
       const res = await syncArticles();
-      message.success(`同步完成，新增 ${res.data?.data || 0} 篇文章`);
+      message.success(`同步完成，新增 ${res.data || 0} 篇文章`);
       loadArticles(activeSource);
       loadSources();
     } catch {
@@ -173,7 +140,7 @@ export default function ReadPage() {
                 { value: 'all', label: '全部来源' },
                 ...sources.map(s => ({
                   value: s.id,
-                  label: `${s.name} (${s.count})`,
+                  label: `${s.name} (${s.articleCount})`,
                 })),
               ]}
             />
@@ -244,12 +211,12 @@ export default function ReadPage() {
                     description={
                       <div>
                         {article.summary && (
-                          <Paragraph
-                            ellipsis={{ rows: 2 }}
-                            style={{ marginBottom: 8, color: '#666' }}
+                          <Text
+                            ellipsis
+                            style={{ marginBottom: 8, color: '#666', display: 'block' }}
                           >
                             {article.summary}
-                          </Paragraph>
+                          </Text>
                         )}
                         <Row justify="space-between" align="middle">
                           <Col>

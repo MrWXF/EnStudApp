@@ -1,5 +1,6 @@
 package com.enstud.read.controller;
 
+import com.enstud.common.AuthRequired;
 import com.enstud.common.Result;
 import com.enstud.common.SecurityContext;
 import com.enstud.read.dto.ArticleDTO;
@@ -9,6 +10,7 @@ import com.enstud.read.service.ReadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -16,13 +18,11 @@ import java.util.List;
 @Tag(name = "阅读服务", description = "热门英文技术文章聚合、阅读、翻译")
 @RestController
 @RequestMapping("/read")
+@RequiredArgsConstructor
+@AuthRequired
 public class ReadController {
 
     private final ReadService readService;
-
-    public ReadController(ReadService readService) {
-        this.readService = readService;
-    }
 
     @Operation(summary = "获取热门文章列表")
     @GetMapping("/hot")
@@ -58,7 +58,6 @@ public class ReadController {
     @PostMapping("/{id}/bookmark")
     public Result<Boolean> toggleBookmark(@PathVariable Long id) {
         Long userId = SecurityContext.getCurrentUserId();
-        if (userId == null) return Result.fail(401, "请先登录");
         return Result.success(readService.toggleBookmark(userId, id));
     }
 
@@ -66,7 +65,6 @@ public class ReadController {
     @GetMapping("/bookmarks")
     public Result<List<ArticleDTO>> getBookmarks() {
         Long userId = SecurityContext.getCurrentUserId();
-        if (userId == null) return Result.fail(401, "请先登录");
         return Result.success(readService.getBookmarks(userId));
     }
 

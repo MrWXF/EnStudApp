@@ -137,11 +137,19 @@ public class WordServiceImpl implements WordService {
 
         List<Word> newWords = wordMapper.selectList(wrapper);
 
-        // 合并结果
-        List<WordCardDTO> result = new ArrayList<>();
+        // 合并结果（批量查询，避免 N+1）
+        List<Long> dueWordIds = dueRecords.stream().map(UserWordRecord::getWordId).toList();
+        Map<Long, Word> wordMap;
+        if (!dueWordIds.isEmpty()) {
+            wordMap = wordMapper.selectBatchIds(dueWordIds).stream()
+                    .collect(Collectors.toMap(Word::getId, w -> w, (a, b) -> a));
+        } else {
+            wordMap = Map.of();
+        }
 
+        List<WordCardDTO> result = new ArrayList<>();
         for (UserWordRecord r : dueRecords) {
-            Word w = wordMapper.selectById(r.getWordId());
+            Word w = wordMap.get(r.getWordId());
             if (w != null) {
                 result.add(new WordCardDTO(w.getId(), w.getWord(), w.getPhoneticUk(),
                         w.getPhoneticUs(), w.getDefinitionCn(), w.getDefinitionEn(),
