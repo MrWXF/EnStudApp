@@ -1,26 +1,23 @@
 import axios from 'axios';
 import { message } from 'antd';
 
-const api = axios.create({
+const client = axios.create({
   baseURL: '/api',
   timeout: 15000,
 });
 
-api.interceptors.request.use((config) => {
+client.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
-api.interceptors.response.use(
+client.interceptors.response.use(
   (res) => {
-    const data = res.data as any;
-    // 统一处理业务错误码
-    if (data && data.code !== undefined && data.code !== 0) {
-      message.error(data.msg || '请求失败');
-      return Promise.reject(data);
-    }
-    return data;
+    // 拦截器统一拆解 axios 包装，页面直接使用 ApiResponse<T>
+    return res.data;
   },
   (err) => {
     if (err.response?.status === 401) {
@@ -32,7 +29,7 @@ api.interceptors.response.use(
       message.error(err.response?.data?.msg || '网络错误，请稍后重试');
     }
     return Promise.reject(err.response?.data || err);
-  }
+  },
 );
 
-export default api;
+export default client;

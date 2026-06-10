@@ -13,6 +13,7 @@ import ForumDetailPage from './pages/ForumDetailPage';
 import CreatePostPage from './pages/CreatePostPage';
 import ReadPage from './pages/ReadPage';
 import ReadDetailPage from './pages/ReadDetailPage';
+import DashboardPage from './pages/DashboardPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const token = localStorage.getItem('token');
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={<PrivateRoute><MainLayout /></PrivateRoute>}>
             <Route index element={<HomePage />} />
+            <Route path="dashboard" element={<DashboardPage />} />
             <Route path="word" element={<WordPage />} />
             <Route path="chat" element={<ChatPage />} />
             <Route path="writing" element={<WritingPage />} />

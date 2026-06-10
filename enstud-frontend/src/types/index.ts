@@ -258,3 +258,15 @@ export interface ApiResponse<T> {
   msg: string;
   data: T;
 }
+
+// ===== Dashboard =====
+export interface UserStats {
+  todayLearnedWords: number;
+  totalLearnedWords: number;
+  totalReadArticles: number;
+  totalWritings: number;
+  avgWritingScore: number;
+  totalChats: number;
+  totalPosts: number;
+  memoryLevelDistribution: MemoryLevelDistribution;
+}

@@ -2,6 +2,7 @@ package com.enstud.word.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.enstud.common.BusinessException;
+import com.enstud.common.constant.ErrorCode;
 import com.enstud.common.entity.Word;
 import com.enstud.common.enums.MemoryLevel;
 import com.enstud.word.algorithm.Sm2Algorithm;
@@ -52,7 +53,7 @@ public class WordServiceImpl implements WordService {
     @Override
     public List<WordCardDTO> getWordsByWordbook(Long wordbookId, Long userId, String cursor, int limit) {
         if (wordbookMapper.selectById(wordbookId) == null) {
-            throw new BusinessException(2002, "词库不存在");
+            throw new BusinessException(ErrorCode.WORD_BOOK_NOT_FOUND);
         }
 
         // 获取词库下的单词
@@ -172,7 +173,7 @@ public class WordServiceImpl implements WordService {
     public void submitReview(Long userId, Long wordId, int quality) {
         Word word = wordMapper.selectById(wordId);
         if (word == null) {
-            throw new BusinessException(2001, "单词不存在");
+            throw new BusinessException(ErrorCode.WORD_NOT_FOUND);
         }
 
         // 查找或创建用户学习记录
@@ -235,7 +236,7 @@ public class WordServiceImpl implements WordService {
     @Override
     public List<WordCardDTO> getWordsByMemoryLevel(Long userId, Long wordbookId, Integer memoryLevel, String cursor, int limit) {
         if (memoryLevel < 0 || memoryLevel > 5) {
-            throw new BusinessException(2003, "记忆等级必须在 0-5 之间");
+            throw new BusinessException(ErrorCode.INVALID_MEMORY_LEVEL);
         }
 
         // 筛选用户学习记录中指定记忆等级的单词 ID
@@ -283,7 +284,7 @@ public class WordServiceImpl implements WordService {
     @Transactional(rollbackFor = Exception.class)
     public void adjustMemoryLevel(Long userId, Long wordId, Integer targetLevel) {
         if (targetLevel < 0 || targetLevel > 5) {
-            throw new BusinessException(2003, "记忆等级必须在 0-5 之间");
+            throw new BusinessException(ErrorCode.INVALID_MEMORY_LEVEL);
         }
 
         UserWordRecord record = recordMapper.selectOne(
@@ -293,7 +294,7 @@ public class WordServiceImpl implements WordService {
         );
 
         if (record == null) {
-            throw new BusinessException(2004, "尚未学习该单词，请先复习后再调整记忆等级");
+            throw new BusinessException(ErrorCode.WORD_NOT_LEARNED_YET);
         }
 
         int oldLevel = record.getMemoryLevel() != null ? record.getMemoryLevel() : 0;

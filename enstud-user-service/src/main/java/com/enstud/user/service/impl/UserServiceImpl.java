@@ -3,6 +3,7 @@ package com.enstud.user.service.impl;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.enstud.common.BusinessException;
 import com.enstud.common.JwtUtil;
+import com.enstud.common.constant.ErrorCode;
 import com.enstud.common.entity.User;
 import com.enstud.user.dto.LoginRequest;
 import com.enstud.user.dto.LoginResultDTO;
@@ -40,14 +41,14 @@ public class UserServiceImpl implements UserService {
         Long usernameCount = userMapper.selectCount(
                 new LambdaQueryWrapper<User>().eq(User::getUsername, request.username()));
         if (usernameCount > 0) {
-            throw new BusinessException(1002, "用户名已存在");
+            throw new BusinessException(ErrorCode.USERNAME_EXISTS);
         }
 
         // 检查邮箱是否已注册
         Long emailCount = userMapper.selectCount(
                 new LambdaQueryWrapper<User>().eq(User::getEmail, request.email()));
         if (emailCount > 0) {
-            throw new BusinessException(1003, "邮箱已被注册");
+            throw new BusinessException(ErrorCode.EMAIL_REGISTERED);
         }
 
         // 创建用户
@@ -69,12 +70,12 @@ public class UserServiceImpl implements UserService {
         User user = userMapper.selectOne(
                 new LambdaQueryWrapper<User>().eq(User::getUsername, request.username()));
         if (user == null) {
-            throw new BusinessException(1001, "用户不存在");
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
         // 验证密码
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
-            throw new BusinessException(1004, "密码错误");
+            throw new BusinessException(ErrorCode.PASSWORD_ERROR);
         }
 
         // 更新最后登录时间
@@ -102,7 +103,7 @@ public class UserServiceImpl implements UserService {
     public UserProfileDTO getProfile(Long userId) {
         User user = userMapper.selectById(userId);
         if (user == null) {
-            throw new BusinessException(1001, "用户不存在");
+            throw new BusinessException(ErrorCode.USER_NOT_FOUND);
         }
 
         return new UserProfileDTO(

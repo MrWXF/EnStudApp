@@ -2,6 +2,7 @@ package com.enstud.forum.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.enstud.common.BusinessException;
+import com.enstud.common.constant.ErrorCode;
 import com.enstud.forum.client.UserClient;
 import com.enstud.forum.dto.*;
 import com.enstud.forum.entity.*;
@@ -70,7 +71,7 @@ public class ForumServiceImpl implements ForumService {
     @Override
     public PostDetailDTO getPostDetail(Long postId) {
         ForumPost post = postMapper.selectById(postId);
-        if (post == null) throw new BusinessException(6001, "帖子不存在");
+        if (post == null) throw new BusinessException(ErrorCode.POST_NOT_FOUND);
 
         // 浏览量+1
         post.setViewCount(post.getViewCount() + 1);
@@ -94,7 +95,7 @@ public class ForumServiceImpl implements ForumService {
     @Transactional(rollbackFor = Exception.class)
     public PostDTO createPost(Long userId, CreatePostRequest request) {
         ForumCategory cat = categoryMapper.selectById(request.categoryId());
-        if (cat == null) throw new BusinessException(400, "板块不存在");
+        if (cat == null) throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
 
         ForumPost post = new ForumPost();
         post.setTitle(request.title());
@@ -115,8 +116,8 @@ public class ForumServiceImpl implements ForumService {
     @Override
     public void deletePost(Long userId, Long postId) {
         ForumPost post = postMapper.selectById(postId);
-        if (post == null) throw new BusinessException(6001, "帖子不存在");
-        if (!post.getAuthorId().equals(userId)) throw new BusinessException(403, "只能删除自己的帖子");
+        if (post == null) throw new BusinessException(ErrorCode.POST_NOT_FOUND);
+        if (!post.getAuthorId().equals(userId)) throw new BusinessException(ErrorCode.FORBIDDEN, "只能删除自己的帖子");
         postMapper.deleteById(postId);
         log.info("帖子已删除, postId={}, userId={}", postId, userId);
     }
@@ -125,7 +126,7 @@ public class ForumServiceImpl implements ForumService {
     @Transactional(rollbackFor = Exception.class)
     public ReplyDTO createReply(Long userId, Long postId, CreateReplyRequest request) {
         ForumPost post = postMapper.selectById(postId);
-        if (post == null) throw new BusinessException(6001, "帖子不存在");
+        if (post == null) throw new BusinessException(ErrorCode.POST_NOT_FOUND);
 
         ForumReply reply = new ForumReply();
         reply.setPostId(postId);

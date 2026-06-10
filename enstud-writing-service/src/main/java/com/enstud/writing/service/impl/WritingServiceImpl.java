@@ -2,6 +2,7 @@ package com.enstud.writing.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.enstud.common.BusinessException;
+import com.enstud.common.constant.ErrorCode;
 import com.enstud.writing.ai.WritingAiClient;
 import com.enstud.writing.ai.WritingCorrection;
 import com.enstud.writing.ai.WritingRequest;
@@ -56,8 +57,8 @@ public class WritingServiceImpl implements WritingService {
     @Override
     public CorrectionDTO getCorrection(Long writingId) {
         Writing writing = writingMapper.selectById(writingId);
-        if (writing == null) throw new BusinessException(4001, "作文不存在");
-        if (writing.getCorrection() == null) throw new BusinessException(4002, "批改结果不存在");
+        if (writing == null) throw new BusinessException(ErrorCode.WRITING_NOT_FOUND);
+        if (writing.getCorrection() == null) throw new BusinessException(ErrorCode.CORRECTION_NOT_FOUND);
 
         WritingCorrection result = parseCorrection(writing.getCorrection());
         return buildCorrectionDTO(writingId, result);
@@ -93,7 +94,7 @@ public class WritingServiceImpl implements WritingService {
     public void deleteWriting(Long userId, Long writingId) {
         Writing writing = writingMapper.selectById(writingId);
         if (writing == null || !writing.getUserId().equals(userId)) {
-            throw new BusinessException(4001, "作文不存在");
+            throw new BusinessException(ErrorCode.WRITING_NOT_FOUND);
         }
         writingMapper.deleteById(writingId);
     }

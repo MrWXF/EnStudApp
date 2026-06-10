@@ -3,13 +3,14 @@ import { Layout, Menu, Button, Avatar, Dropdown } from 'antd';
 import {
   HomeOutlined, BookOutlined, MessageOutlined, EditOutlined,
   TranslationOutlined, TeamOutlined, LogoutOutlined, UserOutlined,
-  ReadOutlined,
+  ReadOutlined, RiseOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
 
 const menuItems = [
   { key: '/', icon: <HomeOutlined />, label: '首页' },
+  { key: '/dashboard', icon: <RiseOutlined />, label: '仪表盘' },
   { key: '/word', icon: <BookOutlined />, label: '单词学习' },
   { key: '/chat', icon: <MessageOutlined />, label: 'AI 对话' },
   { key: '/writing', icon: <EditOutlined />, label: '写作练习' },

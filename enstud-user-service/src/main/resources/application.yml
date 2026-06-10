@@ -41,6 +41,14 @@ knife4j:
 jwt:
   secret: ${JWT_SECRET:enstud-app-jwt-secret-key-2024-production-must-change}
 
+# 内部微服务地址（用于 StatsClient）
+service:
+  word: ${SERVICE_WORD:http://localhost:8082}
+  read: ${SERVICE_READ:http://localhost:8087}
+  writing: ${SERVICE_WRITING:http://localhost:8084}
+  chat: ${SERVICE_CHAT:http://localhost:8083}
+  forum: ${SERVICE_FORUM:http://localhost:8086}
+
 # 日志
 logging:
   level:

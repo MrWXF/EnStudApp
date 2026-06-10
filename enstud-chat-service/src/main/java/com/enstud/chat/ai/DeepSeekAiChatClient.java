@@ -2,6 +2,7 @@ package com.enstud.chat.ai;
 
 import com.enstud.common.BusinessException;
 import com.enstud.common.ai.DeepSeekClient;
+import com.enstud.common.constant.ErrorCode;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -94,7 +95,7 @@ public class DeepSeekAiChatClient implements AiChatClient {
         } catch (Exception e) {
             // 其他异常（网络、JSON 解析等）包装为业务异常
             log.error("DeepSeek chat error", e);
-            throw new BusinessException(5002, "AI 对话服务异常");
+            throw new BusinessException(ErrorCode.AI_SERVICE_ERROR);
         }
     }
 

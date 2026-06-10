@@ -1,6 +1,7 @@
 package com.enstud.common.ai;
 
 import com.enstud.common.BusinessException;
+import com.enstud.common.constant.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -95,14 +96,14 @@ public class DeepSeekClient {
                 String content = response.getContent();
                 if (content == null || content.isBlank()) {
                     log.warn("DeepSeek returned empty content");
-                    throw new BusinessException(5001, "AI 返回内容为空，请稍后重试");
+                    throw new BusinessException(ErrorCode.AI_RESPONSE_EMPTY);
                 }
                 return content;
             } else {
                 // API 返回错误
                 String errorBody = new String(conn.getErrorStream().readAllBytes(), StandardCharsets.UTF_8);
                 log.error("DeepSeek API error: code={}, body={}", code, errorBody);
-                throw new BusinessException(5002, "AI 服务调用失败: HTTP " + code);
+                throw new BusinessException(ErrorCode.AI_SERVICE_ERROR, "AI 服务调用失败: HTTP " + code);
             }
         } catch (BusinessException e) {
             // 业务异常直接向上抛出
@@ -110,7 +111,7 @@ public class DeepSeekClient {
         } catch (Exception e) {
             // 其他异常（网络、JSON 解析等）统一包装
             log.error("DeepSeek API call failed", e);
-            throw new BusinessException(5002, "AI 服务调用异常: " + e.getMessage());
+            throw new BusinessException(ErrorCode.AI_SERVICE_ERROR, "AI 服务调用异常: " + e.getMessage());
         }
     }
 

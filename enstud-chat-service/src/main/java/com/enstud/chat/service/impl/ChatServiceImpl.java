@@ -11,6 +11,7 @@ import com.enstud.chat.mapper.ChatMessageMapper;
 import com.enstud.chat.mapper.ChatSessionMapper;
 import com.enstud.chat.service.ChatService;
 import com.enstud.common.BusinessException;
+import com.enstud.common.constant.ErrorCode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.SneakyThrows;
@@ -48,7 +49,7 @@ public class ChatServiceImpl implements ChatService {
     public SendMessageResponse sendMessage(Long userId, Long sessionId, String content) {
         ChatSession session = sessionMapper.selectById(sessionId);
         if (session == null || !session.getUserId().equals(userId)) {
-            throw new BusinessException(3001, "对话不存在");
+            throw new BusinessException(ErrorCode.CONVERSATION_NOT_FOUND);
         }
 
         // 构建对话历史
@@ -123,7 +124,7 @@ public class ChatServiceImpl implements ChatService {
     public void deleteSession(Long userId, Long sessionId) {
         ChatSession session = sessionMapper.selectById(sessionId);
         if (session == null || !session.getUserId().equals(userId)) {
-            throw new BusinessException(3001, "对话不存在");
+            throw new BusinessException(ErrorCode.CONVERSATION_NOT_FOUND);
         }
         sessionMapper.deleteById(sessionId);
         log.info("会话已删除, sessionId={}, userId={}", sessionId, userId);
