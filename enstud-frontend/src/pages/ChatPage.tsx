@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, Input, Button, List, Avatar, Select, Space, message, Tag } from 'antd';
 import { SendOutlined, PlusOutlined, UserOutlined, RobotOutlined, DeleteOutlined } from '@ant-design/icons';
 import { createSession, getSessions, sendMessage, getMessages, deleteSession } from '../api';
-import type { ChatSession, MessageDTO, ApiResponse } from '../types';
+import type { ChatSession, MessageDTO } from '../types';
 
 export default function ChatPage() {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
@@ -18,15 +18,15 @@ export default function ChatPage() {
   useEffect(() => { listRef.current?.scrollTo(0, listRef.current.scrollHeight); }, [messages]);
 
   const loadSessions = async () => {
-    try { const res: ApiResponse<ChatSession[]> = await getSessions(); setSessions(res.data || []); } catch {}
+    try { const res = await getSessions(); setSessions(res.data || []); } catch {}
   };
   const loadMessages = async (id: number) => {
-    try { const res: ApiResponse<MessageDTO[]> = await getMessages(id); setMessages(res.data || []); } catch {}
+    try { const res = await getMessages(id); setMessages(res.data || []); } catch {}
   };
 
   const handleNewSession = async () => {
     try {
-      const res: ApiResponse<ChatSession> = await createSession(scenario);
+      const res = await createSession(scenario);
       setActiveSession(res.data.id);
       setMessages([]);
       loadSessions();
@@ -43,9 +43,9 @@ export default function ChatPage() {
     setLoading(true);
     setMessages((prev) => [...prev, { role: 'USER', content: text } as MessageDTO]);
     try {
-      const res: ApiResponse<{ aiMessage: MessageDTO }> = await sendMessage(activeSession, text);
+      const res = await sendMessage(activeSession, text);
       const { aiMessage } = res.data;
-      setMessages((prev) => [...prev, aiMessage]);
+      setMessages((prev) => [...prev, { role: 'USER', content: text } as MessageDTO, aiMessage]);
     } catch {
       message.error('发送失败');
     } finally {
@@ -105,7 +105,7 @@ export default function ChatPage() {
                 {m.grammarIssues && m.grammarIssues.length > 0 && (
                   <div style={{ marginTop: 8 }}>
                     {m.grammarIssues.map((g, j) => (
-                      <Tag key={j} color="orange" style={{ marginTop: 4 }}>{g.original} → {g.suggestion}</Tag>
+                      <Tag key={j} color="orange" style={{ marginTop: 4 }}>{g.error} → {g.correction}</Tag>
                     ))}
                   </div>
                 )}

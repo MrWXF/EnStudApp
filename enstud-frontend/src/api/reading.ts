@@ -1,23 +1,29 @@
-import api from './client';
-import type { ArticleDTO, ArticleDetailDTO, SourceDTO, ApiResponse } from '../types';
+import { get, post } from './client';
+import type { ArticleDTO, ArticleDetailDTO, SourceDTO, WordLookupResponse } from '../types';
 
 export const getHotArticles = (source = 'all') =>
-  api.get<ApiResponse<ArticleDTO[]>>('/read/hot', { params: { source } });
+  get<ArticleDTO[]>('/read/hot', { source });
 
 export const getArticleDetail = (articleId: number) =>
-  api.get<ApiResponse<ArticleDetailDTO>>(`/read/${articleId}`);
+  get<ArticleDetailDTO>(`/read/${articleId}`);
 
 export const getArticleTranslation = (articleId: number) =>
-  api.get<ApiResponse<string>>(`/read/${articleId}/translate`);
+  get<ArticleDetailDTO>(`/read/${articleId}/translate`);
 
 export const toggleBookmark = (articleId: number) =>
-  api.post<ApiResponse<null>>(`/read/${articleId}/bookmark`);
+  post<null>(`/read/${articleId}/bookmark`);
 
 export const getBookmarks = () =>
-  api.get<ApiResponse<ArticleDTO[]>>('/read/bookmarks');
+  get<ArticleDTO[]>('/read/bookmarks');
 
 export const getSources = () =>
-  api.get<ApiResponse<SourceDTO[]>>('/read/sources');
+  get<SourceDTO[]>('/read/sources');
 
 export const syncArticles = () =>
-  api.post<ApiResponse<null>>('/read/sync');
+  post<null>('/read/sync');
+
+/**
+ * 划词查词：翻译选中文本并加入生词本
+ */
+export const wordLookup = (params: { selectedText: string; articleId: number; contextSentence?: string }) =>
+  post<WordLookupResponse>('/read/word-lookup', params);

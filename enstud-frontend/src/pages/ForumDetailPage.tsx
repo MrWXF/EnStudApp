@@ -5,7 +5,7 @@ import { LikeOutlined, LikeFilled, ArrowLeftOutlined, DeleteOutlined, UserOutlin
 import { getPostDetail, replyPost, toggleLike, deletePost } from '../api';
 import { formatRelativeTime, formatDateTime } from '../utils/format';
 import { getCurrentUserId, getUserAvatar } from '../utils/user';
-import type { PostDetail, ForumReply, ApiResponse } from '../types';
+import type { PostDetail, ForumReply } from '../types';
 
 export default function ForumDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -21,7 +21,7 @@ export default function ForumDetailPage() {
   const loadPost = async () => {
     setLoading(true);
     try {
-      const res: ApiResponse<PostDetail> = await getPostDetail(Number(id));
+      const res = await getPostDetail(Number(id));
       setPost(res.data);
     } catch {
       // 错误已在 client 统一处理

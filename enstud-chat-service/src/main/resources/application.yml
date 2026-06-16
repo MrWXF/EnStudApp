@@ -5,12 +5,12 @@ spring:
   application:
     name: enstud-chat-service
   datasource:
-    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/enstud_app?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQL_HOST:172.20.0.2}:${MYSQL_PORT:3306}/enstud_app?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:root}
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
+      host: ${REDIS_HOST:172.20.0.3}
       port: ${REDIS_PORT:6379}
 mybatis-plus:
   configuration:

@@ -11,18 +11,22 @@ export interface RegisterRequest {
 }
 
 export interface LoginResult {
-  token: string;
+  accessToken: string;
   userId: number;
   username: string;
+  nickname: string;
+  // email is NOT in backend LoginResultDTO — only shown if needed
 }
 
 export interface UserProfile {
   id: number;
   username: string;
   email: string;
-  avatar?: string;
+  avatarUrl?: string;    // BE field name (was avatar)
   level: number;
-  experience: number;
+  points: number;        // BE field name (was experience)
+  nickname?: string;     // BE has it but FE ignores
+  lastLoginAt?: string;  // BE has it but FE ignores
   createdAt: string;
 }
 
@@ -35,7 +39,7 @@ export interface WordbookDTO {
   wordCount: number;
   difficulty?: string;
   category?: string;
-  official: boolean;
+  isOfficial: boolean;   // BE field name (was official)
 }
 
 export interface WordCardDTO {
@@ -56,15 +60,6 @@ export interface AdjustMemoryLevelRequest {
   targetLevel: number;
 }
 
-export interface MemoryLevelDistribution {
-  notLearned: number;
-  fuzzy: number;
-  familiar: number;
-  basic: number;
-  proficient: number;
-  mastered: number;
-}
-
 // ===== Chat =====
 export interface ChatSession {
   id: number;
@@ -76,18 +71,16 @@ export interface ChatSession {
 
 export interface MessageDTO {
   id: number;
-  sessionId: number;
   role: 'USER' | 'AI';
   content: string;
   grammarIssues?: GrammarIssue[];
   createdAt: string;
+  // sessionId is NOT in BE MessageDTO
 }
 
 export interface GrammarIssue {
-  start: number;
-  end: number;
-  original: string;
-  suggestion: string;
+  error: string;         // BE field (was original)
+  correction: string;    // BE field (was suggestion)
   explanation: string;
 }
 
@@ -99,8 +92,9 @@ export interface SessionDTO {
 }
 
 export interface SendMessageResponse {
-  message: MessageDTO;
-  grammarSuggestions?: string[];
+  userMessage: MessageDTO;  // BE returns userMessage + aiMessage (not single message)
+  aiMessage: MessageDTO;    // BE returns userMessage + aiMessage
+  grammarIssues: GrammarIssue[]; // BE field name (was grammarSuggestions)
 }
 
 // ===== Writing =====
@@ -138,7 +132,7 @@ export interface ModelEssayDTO {
   title: string;
   content: string;
   topicType: string;
-  comment: string;
+  analysis: string;  // BE field name (was comment)
 }
 
 // ===== Translate =====
@@ -149,8 +143,8 @@ export interface TranslateRequest {
 }
 
 export interface TranslateResponse {
-  original: string;
-  translated: string;
+  sourceText: string;
+  translatedText: string;  // BE field name
   from: string;
   to: string;
 }
@@ -160,19 +154,24 @@ export interface ForumCategory {
   id: number;
   name: string;
   description?: string;
-  postCount: number;
   icon?: string;
+  // postCount is NOT in BE CategoryDTO
 }
 
 export interface ForumPost {
   id: number;
   title: string;
-  content: string;
+  summary: string;      // BE returns summary in list (was content)
   authorName: string;
+  authorId: number;     // BE has it
+  categoryId: number;   // BE has it
   categoryName: string;
   replyCount: number;
   likeCount: number;
-  isLiked?: boolean;
+  viewCount: number;
+  isPinned: boolean;
+  isEssence: boolean;
+  tags?: string;
   createdAt: string;
 }
 
@@ -189,10 +188,13 @@ export interface PostDetail {
   content: string;
   authorName: string;
   authorId: number;
+  categoryId: number;
   categoryName: string;
   likeCount: number;
   replyCount: number;
-  isLiked: boolean;
+  viewCount: number;
+  isPinned: boolean;
+  isEssence: boolean;
   tags?: string;
   replies: ForumReply[];
   createdAt: string;
@@ -200,9 +202,10 @@ export interface PostDetail {
 
 export interface ForumReply {
   id: number;
-  postId: number;
   authorName: string;
+  authorId: number;
   content: string;
+  likeCount: number;
   createdAt: string;
 }
 
@@ -243,13 +246,25 @@ export interface ArticleDetailDTO {
   score: number;
   sourceScore: number;
   publishedAt?: string;
+  // bookmarked is NOT in BE ArticleDetailDTO (only in list ArticleDTO)
 }
 
 export interface SourceDTO {
   id: string;
   name: string;
-  icon?: string;
-  articleCount: number;
+  icon: string;
+  activeCount: number;  // BE field name (was articleCount)
+}
+
+/** 划词查词响应 */
+export interface WordLookupResponse {
+  originalWord: string;
+  wordCount: number;
+  translation: string;
+  phonetic: string;
+  partOfSpeech: string;
+  addedToWordbook: boolean;
+  wordRecordId: number | null;
 }
 
 // ===== API 响应 =====
@@ -268,5 +283,10 @@ export interface UserStats {
   avgWritingScore: number;
   totalChats: number;
   totalPosts: number;
+  streakDays: number;
   memoryLevelDistribution: MemoryLevelDistribution;
+}
+
+export interface MemoryLevelDistribution {
+  [level: string]: number;
 }

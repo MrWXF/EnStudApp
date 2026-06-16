@@ -5,7 +5,7 @@ import { EyeOutlined, LikeOutlined, MessageOutlined, PlusOutlined, SearchOutline
 import { getCategories, getPosts } from '../api';
 import { formatRelativeTime } from '../utils/format';
 import { getUserAvatar } from '../utils/user';
-import type { ForumCategory, ForumPost, ApiResponse } from '../types';
+import type { ForumCategory, ForumPost } from '../types';
 
 export default function ForumPage() {
   const [categories, setCategories] = useState<ForumCategory[]>([]);
@@ -19,13 +19,13 @@ export default function ForumPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    getCategories().then((res: ApiResponse<ForumCategory[]>) => setCategories(res.data || []));
+    getCategories().then(res => setCategories(res.data || []));
   }, []);
 
   const loadPosts = useCallback(async (catIdVal?: number, cursorVal?: string) => {
     setLoading(true);
     try {
-      const res: ApiResponse<ForumPost[]> = await getPosts(catIdVal, cursorVal);
+      const res = await getPosts(catIdVal, cursorVal);
       const list = res.data || [];
       if (cursorVal) {
         setPosts(prev => [...prev, ...list]);
@@ -55,7 +55,7 @@ export default function ForumPage() {
     if (loadingMore || !hasMore || !cursor) return;
     setLoadingMore(true);
     try {
-      const res: ApiResponse<ForumPost[]> = await getPosts(catId, cursor);
+      const res = await getPosts(catId, cursor);
       const list = res.data || [];
       setPosts(prev => [...prev, ...list]);
       setHasMore(list.length >= 20);
@@ -75,7 +75,7 @@ export default function ForumPage() {
   const filteredPosts = searchText.trim()
     ? posts.filter(p =>
         p.title.toLowerCase().includes(searchText.toLowerCase()) ||
-        (p.content || '').toLowerCase().includes(searchText.toLowerCase())
+        (p.summary || '').toLowerCase().includes(searchText.toLowerCase())
       )
     : posts;
 
@@ -106,10 +106,10 @@ export default function ForumPage() {
           </Space>
         }
       />
-      <div style={{ color: '#666', lineHeight: 1.6, paddingLeft: 44 }}>{p.content}</div>
+      <div style={{ color: '#666', lineHeight: 1.6, paddingLeft: 44 }}>{p.summary}</div>
       {p.tags && (
         <div style={{ paddingLeft: 44, marginTop: 8 }}>
-          {p.tags.split(',').filter(Boolean).map((t, i) => (
+          {p.tags.split(',').filter(Boolean).map((t: string, i: number) => (
             <Tag key={i} style={{ borderRadius: 12 }}>#{t.trim()}</Tag>
           ))}
         </div>

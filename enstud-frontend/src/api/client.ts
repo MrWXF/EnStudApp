@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { message } from 'antd';
+import type { ApiResponse } from '../types';
 
 const client = axios.create({
   baseURL: '/api',
@@ -31,5 +32,28 @@ client.interceptors.response.use(
     return Promise.reject(err.response?.data || err);
   },
 );
+
+// 包装 axios 方法，返回正确的 Promise<ApiResponse<T>> 类型
+// 拦截器已在运行时拆包，这里仅修正 TypeScript 类型推断
+export async function get<T>(
+  url: string,
+  params?: Record<string, unknown>,
+): Promise<ApiResponse<T>> {
+  return client.get(url, { params }) as unknown as Promise<ApiResponse<T>>;
+}
+
+export async function post<T>(
+  url: string,
+  data?: unknown,
+  config?: Record<string, unknown>,
+): Promise<ApiResponse<T>> {
+  return client.post(url, data, config) as unknown as Promise<ApiResponse<T>>;
+}
+
+export async function del<T>(
+  url: string,
+): Promise<ApiResponse<T>> {
+  return client.delete(url) as unknown as Promise<ApiResponse<T>>;
+}
 
 export default client;

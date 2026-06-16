@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Form, Input, Button, Select, Space, message } from 'antd';
 import { ArrowLeftOutlined } from '@ant-design/icons';
 import { createPost, getCategories } from '../api';
-import type { ForumCategory, ForumPost, ApiResponse } from '../types';
+import type { ForumCategory } from '../types';
 
 const { TextArea } = Input;
 
@@ -14,13 +14,13 @@ export default function CreatePostPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    getCategories().then((res: ApiResponse<ForumCategory[]>) => setCategories(res.data || []));
+    getCategories().then(res => setCategories(res.data || []));
   }, []);
 
   const handleSubmit = async (values: { title: string; content: string; categoryId: number; tags?: string }) => {
     setLoading(true);
     try {
-      const res: ApiResponse<ForumPost> = await createPost(values);
+      const res = await createPost(values);
       message.success('发帖成功');
       navigate(`/forum/${res.data.id}`);
     } catch {

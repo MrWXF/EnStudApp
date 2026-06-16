@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Row, Col, Statistic, Spin, Typography, Progress } from 'antd';
 import {
   BookOutlined, ReadOutlined, EditOutlined,
-  MessageOutlined, TeamOutlined, RiseOutlined,
+  MessageOutlined, TeamOutlined, RiseOutlined, FireOutlined,
 } from '@ant-design/icons';
 import { getUserStats } from '../api';
 import type { UserStats } from '../types';
@@ -71,6 +71,26 @@ export default function DashboardPage() {
         <Col xs={12} sm={8} lg={4}>
           <Card hoverable>
             <Statistic title="帖子" value={stats.totalPosts} prefix={<TeamOutlined />} suffix="条" />
+          </Card>
+        </Col>
+        {/* 连续学习天数 */}
+        <Col xs={12} sm={8} lg={4}>
+          <Card
+            hoverable
+            style={stats.streakDays >= 7 ? { borderColor: '#ff4d4f', background: '#fff2f0' } : {}}
+          >
+            <Statistic
+              title={
+                <span>
+                  <FireOutlined style={{ color: stats.streakDays >= 7 ? '#ff4d4f' : '#faad14' }} />{' '}
+                  连续学习
+                </span>
+              }
+              value={stats.streakDays}
+              suffix="天"
+              valueStyle={{ color: stats.streakDays >= 7 ? '#ff4d4f' : '#faad14', fontWeight: 700 }}
+              prefix={<FireOutlined />}
+            />
           </Card>
         </Col>
       </Row>

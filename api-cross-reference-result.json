@@ -1,0 +1,63 @@
+{
+  "ok": 0,
+  "total_endpoints_checked": 35,
+  "mismatches": [
+    "auth.ts/register: FE LoginResult type has 'email?: string' but BE LoginResultDTO has NO 'email' field — FE expects a field the backend never returns.",
+    "auth.ts/getProfile: FE UserProfile has 'experience' but BE UserProfileDTO has 'points' — field name mismatch.",
+    "auth.ts/getProfile: FE UserProfile has 'avatar?' but BE UserProfileDTO has 'avatarUrl' — field name mismatch.",
+    "word.ts/getWordbooks: FE WordbookDTO has 'official' (boolean) but BE WordbookDTO has 'isOfficial' — Jackson serializes as 'isOfficial', not 'official'.",
+    "chat.ts/sendMessage: FE SendMessageResponse expects single 'message: MessageDTO' but BE returns 'userMessage' AND 'aiMessage' (two messages).",
+    "chat.ts/sendMessage: FE SendMessageResponse has 'grammarSuggestions?: string[]' but BE returns 'grammarIssues: GrammarIssueDTO[]' — field name AND type mismatch (strings vs objects).",
+    "chat.ts/getMessages: FE MessageDTO has 'sessionId' but BE MessageDTO has NO 'sessionId' field.",
+    "chat.ts: FE GrammarIssue has fields {start, end, original, suggestion, explanation} but BE GrammarIssueDTO has {error, correction, explanation} — completely different field structure. Only 'explanation' matches.",
+    "writing.ts/getModels: FE ModelEssayDTO has 'comment' but BE ModelEssayDTO has 'analysis' — field name mismatch.",
+    "forum.ts/getCategories: FE ForumCategory expects 'postCount' but BE CategoryDTO has NO 'postCount' field (only has {id, name, description, icon}).",
+    "forum.ts/getPosts: FE ForumPost has 'content' but BE PostDTO returns 'summary' (post list returns summary, not full content).",
+    "forum.ts/getPosts: FE ForumPost has 'isLiked?' but BE PostDTO has NO 'isLiked' field.",
+    "forum.ts/getPostDetail: FE PostDetail has 'isLiked' but BE PostDetailDTO has NO 'isLiked' field (BE has isPinned/isEssence instead).",
+    "forum.ts/replyPost: FE types the response as 'ForumPost' but BE actually returns 'ReplyDTO' — completely wrong type.",
+    "forum.ts: FE ForumReply has 'postId' but BE ReplyDTO has NO 'postId' field.",
+    "reading.ts/getArticleTranslation: FE types response as 'string' (get<string>) but BE returns Result<ArticleDetailDTO> — wrong type entirely.",
+    "reading.ts/getArticleDetail: FE ArticleDetailDTO has 'bookmarked?' but BE ArticleDetailDTO has NO 'bookmarked' field (only the list ArticleDTO has it).",
+    "reading.ts/getSources: FE SourceDTO expects 'articleCount' but BE SourceDTO has 'activeCount' — field name mismatch.",
+    "reading.ts/toggleBookmark: FE types as post<null> but BE returns Result<Boolean> — ignores the returned boolean.",
+    "reading.ts/syncArticles: FE types as post<null> but BE returns Result<Integer> — ignores the returned count."
+  ],
+  "summary": {
+    "total_api_calls_checked": 35,
+    "fully_matching": 15,
+    "with_mismatches": 20,
+    "critical_mismatches": [
+      "chat.ts/sendMessage — response structure completely different (userMessage+aiMessage vs single message, grammarIssues vs grammarSuggestions)",
+      "chat.ts GrammarIssue — completely different field structure (start/end/original/suggestion vs error/correction)",
+      "forum.ts/replyPost — wrong return type (ForumPost vs ReplyDTO)",
+      "reading.ts/getArticleTranslation — wrong return type (string vs ArticleDetailDTO)"
+    ],
+    "field_name_mismatches": [
+      "experience vs points (UserProfile)",
+      "avatar vs avatarUrl (UserProfile)",
+      "official vs isOfficial (WordbookDTO)",
+      "comment vs analysis (ModelEssayDTO)",
+      "articleCount vs activeCount (SourceDTO)",
+      "grammarSuggestions vs grammarIssues (SendMessageResponse)",
+      "content vs summary (PostDTO in list)",
+      "original vs error (GrammarIssue)",
+      "suggestion vs correction (GrammarIssue)"
+    ],
+    "missing_fields_in_be": [
+      "email (LoginResultDTO)",
+      "sessionId (MessageDTO)",
+      "postCount (CategoryDTO)",
+      "isLiked (PostDTO, PostDetailDTO)",
+      "bookmarked (ArticleDetailDTO)",
+      "postId (ReplyDTO)"
+    ],
+    "extra_be_fields_fe_ignores": [
+      "refreshToken (LoginResultDTO)",
+      "nickname, lastLoginAt (UserProfileDTO)",
+      "authorId, categoryId (PostDTO)",
+      "isPinned, isEssence, categoryId (PostDetailDTO)",
+      "sourceScore (ArticleDetailDTO)"
+    ]
+  }
+}

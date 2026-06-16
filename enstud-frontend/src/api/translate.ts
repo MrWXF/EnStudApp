@@ -1,5 +1,5 @@
-import api from './client';
-import type { TranslateRequest, TranslateResponse, ApiResponse } from '../types';
+import { post } from './client';
+import type { TranslateRequest, TranslateResponse } from '../types';
 
 export const translateText = (data: TranslateRequest) =>
-  api.post<ApiResponse<TranslateResponse>>('/translate/text', data);
+  post<TranslateResponse>('/translate/text', data);

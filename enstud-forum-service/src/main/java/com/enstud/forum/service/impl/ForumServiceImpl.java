@@ -7,8 +7,8 @@ import com.enstud.forum.client.UserClient;
 import com.enstud.forum.dto.*;
 import com.enstud.forum.entity.*;
 import com.enstud.forum.mapper.*;
+import com.enstud.forum.service.ForumSensitiveService;
 import com.enstud.forum.service.ForumService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ForumServiceImpl implements ForumService {
 
     private final ForumCategoryMapper categoryMapper;
@@ -30,6 +29,18 @@ public class ForumServiceImpl implements ForumService {
     private final ForumReplyMapper replyMapper;
     private final ForumLikeMapper likeMapper;
     private final UserClient userClient;
+    private final ForumSensitiveService sensitiveService;
+
+    public ForumServiceImpl(ForumCategoryMapper categoryMapper, ForumPostMapper postMapper,
+                            ForumReplyMapper replyMapper, ForumLikeMapper likeMapper,
+                            UserClient userClient, ForumSensitiveService sensitiveService) {
+        this.categoryMapper = categoryMapper;
+        this.postMapper = postMapper;
+        this.replyMapper = replyMapper;
+        this.likeMapper = likeMapper;
+        this.userClient = userClient;
+        this.sensitiveService = sensitiveService;
+    }
 
     @Override
     public List<CategoryDTO> getCategories() {
@@ -97,10 +108,20 @@ public class ForumServiceImpl implements ForumService {
         ForumCategory cat = categoryMapper.selectById(request.categoryId());
         if (cat == null) throw new BusinessException(ErrorCode.CATEGORY_NOT_FOUND);
 
+        // 敏感词检查
+        String title = request.title();
+        String content = request.content();
+        if (sensitiveService.containsSensitive(title)) {
+            throw new BusinessException(ErrorCode.CONTENT_SENSITIVE, "标题包含敏感词：" + sensitiveService.findFirstSensitive(title));
+        }
+        if (sensitiveService.containsSensitive(content)) {
+            throw new BusinessException(ErrorCode.CONTENT_SENSITIVE, "内容包含敏感词：" + sensitiveService.findFirstSensitive(content));
+        }
+
         ForumPost post = new ForumPost();
-        post.setTitle(request.title());
-        post.setContent(request.content());
-        post.setSummary(request.content().length() > 200 ? request.content().substring(0, 200) : request.content());
+        post.setTitle(title);
+        post.setContent(content);
+        post.setSummary(content.length() > 200 ? content.substring(0, 200) : content);
         post.setAuthorId(userId);
         post.setCategoryId(request.categoryId());
         post.setTags(request.tags());
@@ -128,9 +149,15 @@ public class ForumServiceImpl implements ForumService {
         ForumPost post = postMapper.selectById(postId);
         if (post == null) throw new BusinessException(ErrorCode.POST_NOT_FOUND);
 
+        // 敏感词检查
+        String content = request.content();
+        if (sensitiveService.containsSensitive(content)) {
+            throw new BusinessException(ErrorCode.CONTENT_SENSITIVE, "回复内容包含敏感词：" + sensitiveService.findFirstSensitive(content));
+        }
+
         ForumReply reply = new ForumReply();
         reply.setPostId(postId);
-        reply.setContent(request.content());
+        reply.setContent(content);
         reply.setAuthorId(userId);
         replyMapper.insert(reply);
 
@@ -169,10 +196,6 @@ public class ForumServiceImpl implements ForumService {
 
     /**
      * 更新目标对象的点赞计数
-     *
-     * @param targetType 目标类型 POST 或 REPLY
-     * @param targetId   目标ID
-     * @param delta      变化量 (+1 或 -1)
      */
     private void updateLikeCount(String targetType, Long targetId, int delta) {
         if ("POST".equals(targetType)) {

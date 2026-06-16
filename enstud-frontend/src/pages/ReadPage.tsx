@@ -75,12 +75,12 @@ export default function ReadPage() {
 
   const handleBookmark = async (articleId: number) => {
     try {
-      const res = await toggleBookmark(articleId);
-      const newBookmarked = res.data;
+      await toggleBookmark(articleId);
       setArticles(prev =>
-        prev.map(a => a.id === articleId ? { ...a, bookmarked: newBookmarked } : a)
+        prev.map(a => a.id === articleId ? { ...a, bookmarked: !a.bookmarked } : a)
       );
-      message.success(newBookmarked ? '已收藏' : '已取消收藏');
+      const current = articles.find(a => a.id === articleId);
+      message.success(current?.bookmarked ? '已取消收藏' : '已收藏');
     } catch {
       message.error('操作失败');
     }
@@ -100,7 +100,7 @@ export default function ReadPage() {
     }
   };
 
-  const formatTime = (time: string | null) => {
+  const formatTime = (time: string | null | undefined) => {
     if (!time) return '';
     const d = new Date(time);
     const now = new Date();
@@ -140,7 +140,7 @@ export default function ReadPage() {
                 { value: 'all', label: '全部来源' },
                 ...sources.map(s => ({
                   value: s.id,
-                  label: `${s.name} (${s.articleCount})`,
+                  label: `${s.name} (${s.activeCount})`,
                 })),
               ]}
             />

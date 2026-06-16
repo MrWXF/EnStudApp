@@ -1,0 +1,181 @@
+name: EnStudApp CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  backend:
+    name: Backend Build & Test
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: estudb
+          MYSQL_USER: enstud
+          MYSQL_PASSWORD: enstud123
+        ports:
+          - 13306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Initialize Database
+        run: |
+          mysql -h 127.0.0.1 -P 13306 -uroot -proot estudb < sql/init.sql 2>/dev/null || true
+          # Apply migration scripts if they exist
+          for f in sql/migrations/*.sql; do
+            [ -f "$f" ] && mysql -h 127.0.0.1 -P 13306 -uroot -proot estudb < "$f" || true
+          done
+
+      - name: Build with Maven
+        run: mvn clean compile -DskipTests -q
+        timeout-minutes: 10
+
+      - name: Run Unit Tests
+        run: mvn test -q
+        timeout-minutes: 10
+        env:
+          SPRING_DATASOURCE_URL: jdbc:mysql://127.0.0.1:13306/estudb?useSSL=false&allowPublicKeyRetrieval=true
+          SPRING_DATASOURCE_USERNAME: root
+          SPRING_DATASOURCE_PASSWORD: root
+          SPRING_DATA_REDIS_HOST: 127.0.0.1
+          SPRING_DATA_REDIS_PORT: 6379
+
+      - name: Upload Test Results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-results
+          path: |
+            **/target/surefire-reports/
+            **/target/failsafe-reports/
+          retention-days: 7
+
+  frontend:
+    name: Frontend Build & Lint
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: enstud-frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: enstud-frontend/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: TypeScript Check
+        run: npx tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+      - name: Lint
+        run: npm run lint 2>/dev/null || echo "Lint script not configured, skipping"
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: enstud-frontend/dist/
+          retention-days: 7
+
+  integration:
+    name: Integration Test (2 services)
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: estudb
+        ports:
+          - 13306:3306
+        options: >-
+          --health-cmd "mysqladmin ping -proot"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Initialize Database
+        run: |
+          mysql -h 127.0.0.1 -P 13306 -uroot -proot estudb < sql/init.sql 2>/dev/null || true
+
+      - name: Start user-service in background
+        run: |
+          mvn spring-boot:run -pl enstud-user-service -am \
+            -Dspring-boot.run.profiles=ci \
+            -Dspring.datasource.url=jdbc:mysql://127.0.0.1:13306/estudb?useSSL=false \
+            -Dspring.datasource.username=root \
+            -Dspring.datasource.password=root \
+            -Dspring.data.redis.host=127.0.0.1 \
+            -Dspring.data.redis.port=6379 \
+            > /tmp/user-service.log 2>&1 &
+          echo "user-service PID: $!"
+
+      - name: Wait for user-service
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:8081/actuator/health > /dev/null 2>&1; then
+              echo "user-service is UP"
+              break
+            fi
+            sleep 2
+          done
+
+      - name: Test Registration API
+        run: |
+          curl -sf -X POST http://localhost:8081/api/user/register \
+            -H "Content-Type: application/json" \
+            -d '{"username":"testuser","password":"Test@1234","email":"test@example.com"}'

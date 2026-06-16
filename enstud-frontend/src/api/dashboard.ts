@@ -1,5 +1,5 @@
-import api from './client';
-import type { UserStats, ApiResponse } from '../types';
+import { get } from './client';
+import type { UserStats } from '../types';
 
 export const getUserStats = () =>
-  api.get<ApiResponse<UserStats>>('/user/stats');
+  get<UserStats>('/user/stats');

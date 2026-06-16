@@ -47,7 +47,9 @@ public enum ErrorCode {
 
     // ===== 6xxx — 论坛模块 =====
     POST_NOT_FOUND(6001, "帖子不存在"),
-    CATEGORY_NOT_FOUND(6002, "板块不存在");
+    CATEGORY_NOT_FOUND(6002, "板块不存在"),
+    CONTENT_SENSITIVE(6003, "内容包含敏感词，请修改后重新提交"),
+    CONTENT_TOO_LONG(6004, "内容长度超过限制"),
 
     private final int code;
     private final String message;

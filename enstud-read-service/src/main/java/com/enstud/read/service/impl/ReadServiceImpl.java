@@ -10,8 +10,10 @@ import com.enstud.read.mapper.ArticleReadRecordMapper;
 import com.enstud.read.service.ReadService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -26,6 +28,13 @@ public class ReadServiceImpl implements ReadService {
     private final ArticleMapper articleMapper;
     private final ArticleReadRecordMapper readRecordMapper;
     private final ArticleAggregator articleAggregator;
+    private final RestTemplate restTemplate;
+
+    @Value("${enstud.services.translate-url:http://localhost:8085}")
+    private String translateServiceUrl;
+
+    @Value("${enstud.services.word-url:http://localhost:8082}")
+    private String wordServiceUrl;
 
     @Override
     public List<ArticleDTO> getHotArticles(Long userId, String source) {
@@ -246,5 +255,85 @@ public class ReadServiceImpl implements ReadService {
                 a.getSummary(), a.getSummaryCn(),
                 a.getScore(), a.getSourceScore(), a.getPublishedAt()
         );
+    }
+
+    @Override
+    public WordLookupResponse wordLookup(Long userId, WordLookupRequest request) {
+        String text = request.getSelectedText().trim();
+
+        // 1. 调用 translate-service 获取翻译
+        String translatedText = callTranslate(text);
+
+        // 2. 尝试加入生词本（只有选中单个单词或简单短语时加入）
+        Long wordRecordId = null;
+        if (text.matches("^[a-zA-Z][a-zA-Z\\-']{1,49}$")) {
+            try {
+                // 构建 AddWordFromReading 请求
+                Map<String, Object> addReq = new HashMap<>();
+                addReq.put("word", text.toLowerCase());
+                addReq.put("definitionCn", translatedText);
+                addReq.put("contextSentence", request.getContextSentence());
+
+                // 通过 Gateway 转发或直接调用 word-service
+                String addUrl = wordServiceUrl + "/word/reading/add";
+                Map<String, Object> addResult = restTemplate.postForObject(addUrl, addReq, Map.class);
+
+                if (addResult != null && "200".equals(String.valueOf(addResult.get("code")))) {
+                    Object data = addResult.get("data");
+                    if (data instanceof Number num) {
+                        wordRecordId = num.longValue();
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to add word '{}' to wordbook for user {}: {}",
+                        text, userId, e.getMessage());
+                // 加入生词本失败不阻塞查词流程，用户仍能看到翻译
+            }
+        }
+
+        // 3. 构建响应
+        WordLookupResponse resp = new WordLookupResponse();
+        resp.setOriginalWord(text);
+        resp.setWordCount(text.split("\\s+").length);
+        resp.setTranslation(translatedText);
+        resp.setPhonetic(""); // 简化版：暂不查音标库
+        resp.setPartOfSpeech(""); // 简化版：暂不识别词性
+        resp.setAddedToWordbook(wordRecordId != null);
+        resp.setWordRecordId(wordRecordId);
+
+        log.info("Word lookup: user={}, word='{}', translation='{}', added={}",
+                userId, text, translatedText, wordRecordId != null);
+        return resp;
+    }
+
+    /**
+     * 调用 translate-service 翻译文本
+     */
+    private String callTranslate(String text) {
+        try {
+            // TranslateRequest 字段: text, from, to
+            Map<String, String> reqBody = new HashMap<>();
+            reqBody.put("text", text);
+            reqBody.put("from", "en");
+            reqBody.put("to", "zh");
+
+            String url = translateServiceUrl + "/translate/text";
+            Map<String, Object> result = restTemplate.postForObject(url, reqBody, Map.class);
+
+            if (result != null) {
+                // TranslateResponse 结构: { sourceText, translatedText, from, to }
+                Object data = result.get("data");
+                if (data instanceof Map<?, ?> dataMap) {
+                    Object translated = dataMap.get("translatedText");
+                    if (translated != null) return translated.toString();
+                }
+                // 兼容直接返回字符串的场景
+                Object translated = result.get("translatedText");
+                if (translated != null) return translated.toString();
+            }
+        } catch (Exception e) {
+            log.warn("Translate service call failed for '{}': {}", text, e.getMessage());
+        }
+        return text + "（翻译服务暂不可用）";
     }
 }

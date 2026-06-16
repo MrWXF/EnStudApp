@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { Card, Form, Input, Button, Tabs, message } from 'antd';
 import { UserOutlined, LockOutlined, MailOutlined } from '@ant-design/icons';
 import { login, register } from '../api';
-import type { ApiResponse, LoginResult } from '../types';
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
@@ -12,7 +11,7 @@ export default function LoginPage() {
   const handleLogin = async (values: { username: string; password: string }) => {
     setLoading(true);
     try {
-      const res: ApiResponse<LoginResult> = await login(values);
+      const res = await login(values);
       localStorage.setItem('token', res.data.accessToken);
       localStorage.setItem('user', JSON.stringify({
         username: res.data.username,

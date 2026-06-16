@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Form, Input, Button, Select, Tabs, List, Tag, message } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
 import { submitWriting, getWritingHistory, getModels } from '../api';
-import type { CorrectionDTO, WritingDTO, ModelEssayDTO, ApiResponse } from '../types';
+import type { CorrectionDTO, WritingDTO, ModelEssayDTO } from '../types';
 
 const { TextArea } = Input;
 
@@ -17,13 +17,13 @@ export default function WritingPage() {
 
   const loadHistory = async () => {
     try {
-      const res: ApiResponse<WritingDTO[]> = await getWritingHistory();
+      const res = await getWritingHistory();
       setHistory(res.data || []);
     } catch {}
   };
   const loadModels = async () => {
     try {
-      const res: ApiResponse<ModelEssayDTO[]> = await getModels();
+      const res = await getModels();
       setModels(res.data || []);
     } catch {}
   };
@@ -32,7 +32,7 @@ export default function WritingPage() {
     setLoading(true);
     setResult(null);
     try {
-      const res: ApiResponse<CorrectionDTO> = await submitWriting(values);
+      const res = await submitWriting(values);
       setResult(res.data);
       loadHistory();
       message.success('批改完成');
@@ -52,7 +52,7 @@ export default function WritingPage() {
   const renderModelItem = (m: ModelEssayDTO) => (
     <Card style={{ marginBottom: 16 }} title={m.title} extra={<Tag>{m.topicType}</Tag>}>
       <p style={{ whiteSpace: 'pre-wrap' }}>{m.content}</p>
-      <Card size="small" style={{ background: '#f6ffed', marginTop: 8 }}>{m.comment}</Card>
+      <Card size="small" style={{ background: '#f6ffed', marginTop: 8 }}>{m.analysis}</Card>
     </Card>
   );
 

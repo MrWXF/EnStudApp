@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, Select, Button, Spin, Progress, message, Empty, Space } from 'antd';
 import { PlayCircleOutlined, CheckCircleOutlined, CloseCircleOutlined } from '@ant-design/icons';
 import { getWordbooks, startStudy, submitReview } from '../api';
-import type { WordbookDTO, WordCardDTO, ApiResponse } from '../types';
+import type { WordbookDTO, WordCardDTO } from '../types';
 
 export default function WordPage() {
   const [wordbooks, setWordbooks] = useState<WordbookDTO[]>([]);
@@ -14,14 +14,14 @@ export default function WordPage() {
   const [studying, setStudying] = useState(false);
 
   useEffect(() => {
-    getWordbooks().then((res: ApiResponse<WordbookDTO[]>) => setWordbooks(res.data || []));
+    getWordbooks().then(res => setWordbooks(res.data || []));
   }, []);
 
   const handleStart = async () => {
     if (!selectedBook) return;
     setLoading(true);
     try {
-      const res: ApiResponse<WordCardDTO[]> = await startStudy(selectedBook, 10);
+      const res = await startStudy(selectedBook, 10);
       setWords(res.data || []);
       setCurrentIdx(0);
       setShowAnswer(false);

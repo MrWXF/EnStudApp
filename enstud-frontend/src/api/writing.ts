@@ -1,11 +1,11 @@
-import api from './client';
-import type { SubmitWritingRequest, WritingDTO, ModelEssayDTO, CorrectionDTO, ApiResponse } from '../types';
+import { get, post } from './client';
+import type { SubmitWritingRequest, WritingDTO, ModelEssayDTO, CorrectionDTO } from '../types';
 
 export const submitWriting = (data: SubmitWritingRequest) =>
-  api.post<ApiResponse<CorrectionDTO>>('/writing/submit', data);
+  post<CorrectionDTO>('/writing/submit', data);
 
 export const getWritingHistory = () =>
-  api.get<ApiResponse<WritingDTO[]>>('/writing/history');
+  get<WritingDTO[]>('/writing/history');
 
 export const getModels = (topicType = 'ESSAY') =>
-  api.get<ApiResponse<ModelEssayDTO[]>>('/writing/models', { params: { topicType } });
+  get<ModelEssayDTO[]>('/writing/models', { topicType });

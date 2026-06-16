@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { Card, Input, Button, Select, Spin, message } from 'antd';
 import { SwapOutlined } from '@ant-design/icons';
 import { translateText } from '../api';
-import type { ApiResponse, TranslateResponse } from '../types';
 
 const { TextArea } = Input;
 
@@ -17,7 +16,7 @@ export default function TranslatePage() {
     if (!text.trim()) return;
     setLoading(true);
     try {
-      const res: ApiResponse<TranslateResponse> = await translateText({
+      const res = await translateText({
         text,
         from: from === 'auto' ? undefined : from,
         to,

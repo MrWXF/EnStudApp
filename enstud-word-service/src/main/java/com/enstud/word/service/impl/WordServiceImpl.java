@@ -6,6 +6,7 @@ import com.enstud.common.constant.ErrorCode;
 import com.enstud.common.entity.Word;
 import com.enstud.common.enums.MemoryLevel;
 import com.enstud.word.algorithm.Sm2Algorithm;
+import com.enstud.word.dto.AddWordFromReadingRequest;
 import com.enstud.word.dto.MemoryLevelDistributionDTO;
 import com.enstud.word.dto.WordCardDTO;
 import com.enstud.word.dto.WordbookDTO;
@@ -336,5 +337,80 @@ public class WordServiceImpl implements WordService {
 
         log.info("用户调整记忆等级, userId={}, wordId={}, oldLevel={}, newLevel={}",
                 userId, wordId, oldLevel, targetLevel);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long addWordFromReading(Long userId, AddWordFromReadingRequest request) {
+        // 1. 查找词库中是否已存在该单词
+        Word existingWord = wordMapper.selectOne(
+                new LambdaQueryWrapper<Word>()
+                        .eq(Word::getWord, request.word())
+                        .last("LIMIT 1")
+        );
+
+        Long wordId;
+        if (existingWord == null) {
+            // 2a. 不存在则创建（默认放入 ID=1 的"生词本"词库）
+            Word word = new Word();
+            word.setWord(request.word());
+            word.setDefinitionCn(request.definitionCn());
+            word.setDefinitionEn(request.definitionEn());
+            word.setPartOfSpeech(request.partOfSpeech());
+            word.setExampleSentence(request.contextSentence());
+            word.setWordbookId(1L);
+            word.setDifficultyLevel(3);
+            wordMapper.insert(word);
+            wordId = word.getId();
+            log.info("阅读新增单词: word={}, wordId={}, userId={}", request.word(), wordId, userId);
+        } else {
+            wordId = existingWord.getId();
+
+            // 如果传入了释义且单词原释义为空，回填释义
+            if (request.definitionCn() != null && !request.definitionCn().isBlank()
+                    && (existingWord.getDefinitionCn() == null || existingWord.getDefinitionCn().isBlank())) {
+                existingWord.setDefinitionCn(request.definitionCn());
+            }
+            if (request.definitionEn() != null && !request.definitionEn().isBlank()
+                    && (existingWord.getDefinitionEn() == null || existingWord.getDefinitionEn().isBlank())) {
+                existingWord.setDefinitionEn(request.definitionEn());
+            }
+            if (request.contextSentence() != null && !request.contextSentence().isBlank()
+                    && existingWord.getExampleSentence() == null) {
+                existingWord.setExampleSentence(request.contextSentence());
+            }
+            if (request.partOfSpeech() != null && existingWord.getPartOfSpeech() == null) {
+                existingWord.setPartOfSpeech(request.partOfSpeech());
+            }
+            wordMapper.updateById(existingWord);
+        }
+
+        // 3. 查找或创建用户学习记录（避免重复加入）
+        UserWordRecord record = recordMapper.selectOne(
+                new LambdaQueryWrapper<UserWordRecord>()
+                        .eq(UserWordRecord::getUserId, userId)
+                        .eq(UserWordRecord::getWordId, wordId)
+                        .last("LIMIT 1")
+        );
+
+        if (record == null) {
+            // 初始化 SM-2 参数
+            record = new UserWordRecord();
+            record.setUserId(userId);
+            record.setWordId(wordId);
+            record.setEaseFactor(2.5);
+            record.setReviewInterval(0);
+            record.setRepetitions(0);
+            record.setMasteryLevel(0);
+            record.setMemoryLevel(0);
+            record.setStatus("NEW");
+            record.setNextReviewTime(LocalDateTime.now().plusDays(1));
+            recordMapper.insert(record);
+            log.info("阅读加入生词本: wordId={}, userId={}", wordId, userId);
+        } else {
+            log.info("单词已在生词本中, wordId={}, userId={}", wordId, userId);
+        }
+
+        return record.getId();
     }
 }

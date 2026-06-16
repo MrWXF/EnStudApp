@@ -14,6 +14,7 @@ public record UserStatsDTO(
         @Schema(description = "平均写作得分") double avgWritingScore,
         @Schema(description = "累计对话数") long totalChats,
         @Schema(description = "累计帖子数") long totalPosts,
+        @Schema(description = "连续学习天数") long streakDays,
         @Schema(description = "记忆等级分布") MemoryLevelDistribution memoryLevelDistribution
 ) {
     @Schema(description = "记忆等级分布")

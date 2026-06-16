@@ -3,19 +3,19 @@ package com.enstud.read.controller;
 import com.enstud.common.AuthRequired;
 import com.enstud.common.Result;
 import com.enstud.common.SecurityContext;
-import com.enstud.read.dto.ArticleDTO;
-import com.enstud.read.dto.ArticleDetailDTO;
-import com.enstud.read.dto.SourceDTO;
+import com.enstud.read.dto.*;
 import com.enstud.read.service.ReadService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
-@Tag(name = "阅读服务", description = "热门英文技术文章聚合、阅读、翻译")
+@Tag(name = "阅读服务", description = "热门英文技术文章聚合、阅读、翻译、划词查词")
 @RestController
 @RequestMapping("/read")
 @RequiredArgsConstructor
@@ -80,5 +80,13 @@ public class ReadController {
     public Result<Integer> sync() {
         int count = readService.syncArticles();
         return Result.success(count);
+    }
+
+    @Operation(summary = "划词查词：翻译选中文本并加入生词本")
+    @PostMapping("/word-lookup")
+    public Result<WordLookupResponse> wordLookup(@Valid @RequestBody WordLookupRequest request) {
+        Long userId = SecurityContext.getCurrentUserId();
+        WordLookupResponse response = readService.wordLookup(userId, request);
+        return Result.success(response);
     }
 }

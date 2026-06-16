@@ -10,6 +10,7 @@ import com.enstud.user.dto.LoginResultDTO;
 import com.enstud.user.dto.RegisterRequest;
 import com.enstud.user.dto.UserProfileDTO;
 import com.enstud.user.mapper.UserMapper;
+import com.enstud.user.service.LearningStreakService;
 import com.enstud.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class UserServiceImpl implements UserService {
 
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final LearningStreakService learningStreakService;
 
     @Value("${jwt.secret}")
     private String jwtSecret;
@@ -81,6 +83,9 @@ public class UserServiceImpl implements UserService {
         // 更新最后登录时间
         user.setLastLoginAt(LocalDateTime.now());
         userMapper.updateById(user);
+
+        // 更新连续学习天数（每天首次登录时触发）
+        learningStreakService.updateStreak(user.getId());
 
         // 生成 Token
         String accessToken = JwtUtil.generateAccessToken(user.getId(), user.getUsername(), jwtSecret);

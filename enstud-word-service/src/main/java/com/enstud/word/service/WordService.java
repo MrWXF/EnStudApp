@@ -1,5 +1,6 @@
 package com.enstud.word.service;
 
+import com.enstud.word.dto.AddWordFromReadingRequest;
 import com.enstud.word.dto.MemoryLevelDistributionDTO;
 import com.enstud.word.dto.WordCardDTO;
 import com.enstud.word.dto.WordStatsDTO;
@@ -29,4 +30,14 @@ public interface WordService {
 
     /** 手动调整单词记忆等级 */
     void adjustMemoryLevel(Long userId, Long wordId, Integer targetLevel);
+
+    /**
+     * 从阅读中新增单词到生词本
+     * <p>如果单词在词库中已存在，直接关联；否则先创建再关联。</p>
+     *
+     * @param userId  用户ID
+     * @param request 单词信息
+     * @return 单词记录ID
+     */
+    Long addWordFromReading(Long userId, AddWordFromReadingRequest request);
 }

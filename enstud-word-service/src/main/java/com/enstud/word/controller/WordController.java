@@ -4,6 +4,7 @@ import com.enstud.common.AuthRequired;
 import com.enstud.common.Result;
 import com.enstud.common.SecurityContext;
 import com.enstud.word.dto.AdjustMemoryLevelRequest;
+import com.enstud.word.dto.AddWordFromReadingRequest;
 import com.enstud.word.dto.MemoryLevelDistributionDTO;
 import com.enstud.word.dto.WordCardDTO;
 import com.enstud.word.dto.WordbookDTO;
@@ -84,5 +85,13 @@ public class WordController {
         Long userId = SecurityContext.getCurrentUserId();
         wordService.adjustMemoryLevel(userId, request.wordId(), request.targetLevel());
         return Result.success();
+    }
+
+    @Operation(summary = "从阅读中新增单词/加入生词本")
+    @PostMapping("/reading/add")
+    public Result<Long> addWordFromReading(@Valid @RequestBody AddWordFromReadingRequest request) {
+        Long userId = SecurityContext.getCurrentUserId();
+        Long recordId = wordService.addWordFromReading(userId, request);
+        return Result.success(recordId);
     }
 }

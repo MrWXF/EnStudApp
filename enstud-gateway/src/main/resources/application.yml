@@ -7,54 +7,56 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        server-addr: ${NACOS_SERVER_ADDR:172.20.0.4:8848}
         namespace: ${NACOS_NAMESPACE:}
       config:
-        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
+        server-addr: ${NACOS_SERVER_ADDR:172.20.0.4:8848}
         namespace: ${NACOS_NAMESPACE:}
         file-extension: yaml
         refresh-enabled: true
+        import-check:
+          enabled: false
     gateway:
       discovery:
         locator:
-          enabled: true
+          enabled: false
           lower-case-service-id: true
       routes:
         # 用户服务
         - id: user-service
-          uri: lb://enstud-user-service
+          uri: http://172.20.0.6:8081
           predicates:
-            - Path=/user/**
+            - Path=/user/**,/api/user/**
         # 单词服务
         - id: word-service
-          uri: lb://enstud-word-service
+          uri: http://172.20.0.6:8082
           predicates:
-            - Path=/word/**
+            - Path=/word/**,/api/word/**
         # AI 对话服务
         - id: chat-service
-          uri: lb://enstud-chat-service
+          uri: http://172.20.0.6:8083
           predicates:
-            - Path=/chat/**
+            - Path=/chat/**,/api/chat/**
         # 写作服务
         - id: writing-service
-          uri: lb://enstud-writing-service
+          uri: http://172.20.0.6:8084
           predicates:
-            - Path=/writing/**
+            - Path=/writing/**,/api/writing/**
         # 翻译服务
         - id: translate-service
-          uri: lb://enstud-translate-service
+          uri: http://172.20.0.6:8085
           predicates:
-            - Path=/translate/**
+            - Path=/translate/**,/api/translate/**
         # 论坛服务
         - id: forum-service
-          uri: lb://enstud-forum-service
+          uri: http://172.20.0.6:8086
           predicates:
-            - Path=/forum/**
+            - Path=/forum/**,/api/forum/**
         # 阅读服务
         - id: read-service
-          uri: lb://enstud-read-service
+          uri: http://172.20.0.6:8087
           predicates:
-            - Path=/read/**
+            - Path=/read/**,/api/read/**
       # 全局 CORS 配置
       globalcors:
         cors-configurations:
@@ -66,7 +68,7 @@ spring:
             maxAge: 3600
   data:
     redis:
-      host: ${REDIS_HOST:localhost}
+      host: ${REDIS_HOST:172.20.0.3}
       port: ${REDIS_PORT:6379}
 
 # JWT 配置
@@ -75,11 +77,7 @@ jwt:
 
 # 不需要鉴权的路径（白名单）
 gateway:
-  white-list:
-    - /user/register
-    - /user/login
-    - /forum/posts
-    - /word/wordbooks
+  white-list: /user/register,/user/login,/forum/posts,/word/wordbooks
 
 # 日志
 logging:

@@ -1,61 +1,44 @@
 package com.enstud.forum.client;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.enstud.common.Result;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-
 /**
- * 用户服务客户端
- * <p>通过 HTTP 调用 user-service 获取用户信息，结果缓存在本地 Map 中。</p>
+ * 用户服务客户端：通过 RestTemplate 调用 user-service 获取用户信息
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class UserClient {
 
-    private final RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate;
 
-    @Value("${user-service.base-url:http://localhost:8081}")
-    private String userServiceBaseUrl;
-
-    /** 用户名缓存：userId -> username/nickname */
-    private final Map<Long, String> nameCache = new ConcurrentHashMap<>();
+    @Value("${enstud.services.user-url:http://localhost:8081}")
+    private String userServiceUrl;
 
     /**
-     * 根据 userId 获取用户昵称/用户名
-     *
-     * @param userId 用户ID
-     * @return 用户昵称，若用户名则返回 username；获取失败返回 null
+     * 根据用户 ID 获取用户名
      */
     public String getUserName(Long userId) {
-        if (userId == null) return null;
-        return nameCache.computeIfAbsent(userId, this::fetchUserName);
-    }
-
-    /**
-     * 清除指定用户缓存
-     */
-    public void evictCache(Long userId) {
-        nameCache.remove(userId);
-    }
-
-    /**
-     * 从 user-service 获取用户名
-     */
-    private String fetchUserName(Long userId) {
         try {
-            String url = userServiceBaseUrl + "/user/users/" + userId + "/name";
-            var response = restTemplate.getForObject(url, Map.class);
-            if (response != null && response.containsKey("data")) {
-                return (String) response.get("data");
+            String url = userServiceUrl + "/user/users/" + userId + "/name";
+            ParameterizedTypeReference<Result<String>> typeRef =
+                    new ParameterizedTypeReference<>() {};
+            Result<String> result = restTemplate.exchange(
+                    url, HttpMethod.GET, null, typeRef
+            ).getBody();
+            if (result != null && result.getCode() == 0 && result.getData() != null) {
+                return result.getData();
             }
         } catch (Exception e) {
-            log.warn("获取用户信息失败, userId={}, error={}", userId, e.getMessage());
+            log.warn("获取用户名失败: userId={}", userId, e);
         }
-        return null;
+        return "用户" + userId;
     }
 }
