@@ -1,0 +1,55 @@
+# user-service 集成测试 profile
+# H2 内存数据库 + 禁用 Nacos/Redis/Redisson
+
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+    openfeign:
+      enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - com.alibaba.cloud.nacos.discovery.NacosDiscoveryClientAutoConfiguration
+      - org.springframework.cloud.openfeign.FeignAutoConfiguration
+      - org.springframework.cloud.loadbalancer.config.LoadBalancerAutoConfiguration
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:test-schema.sql
+
+# MyBatis-Plus
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      logic-delete-field: isDeleted
+      logic-delete-value: 1
+      logic-not-delete-value: 0
+
+# JWT（测试用固定密钥）
+jwt:
+  secret: test-secret-for-integration-tests-only
+
+# 内部服务 URL（测试中不会被调用）
+service:
+  word: http://localhost:8082
+  writing: http://localhost:8084
+  chat: http://localhost:8083
+  forum: http://localhost:8086
+
+# 日志
+logging:
+  level:
+    root: WARN
+    com.enstud: DEBUG

@@ -1,0 +1,27 @@
+CREATE TABLE IF NOT EXISTS enstud_forum_category (
+    id BIGINT NOT NULL AUTO_INCREMENT, name VARCHAR(50) NOT NULL, description VARCHAR(200),
+    icon VARCHAR(100), sort_order INT DEFAULT 0, is_deleted TINYINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id)
+);
+CREATE TABLE IF NOT EXISTS enstud_forum_post (
+    id BIGINT NOT NULL AUTO_INCREMENT, title VARCHAR(200) NOT NULL, content CLOB NOT NULL,
+    summary VARCHAR(500), author_id BIGINT NOT NULL, category_id BIGINT NOT NULL,
+    tags VARCHAR(500), view_count INT DEFAULT 0, like_count INT DEFAULT 0,
+    reply_count INT DEFAULT 0, collect_count INT DEFAULT 0, is_pinned TINYINT DEFAULT 0,
+    is_essence TINYINT DEFAULT 0, status VARCHAR(20) DEFAULT 'PUBLISHED',
+    is_deleted TINYINT DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id)
+);
+CREATE TABLE IF NOT EXISTS enstud_forum_reply (
+    id BIGINT NOT NULL AUTO_INCREMENT, post_id BIGINT NOT NULL, parent_id BIGINT,
+    content TEXT NOT NULL, author_id BIGINT NOT NULL, like_count INT DEFAULT 0,
+    is_deleted TINYINT DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id)
+);
+CREATE TABLE IF NOT EXISTS enstud_forum_like (
+    id BIGINT NOT NULL AUTO_INCREMENT, user_id BIGINT NOT NULL,
+    target_type VARCHAR(20) NOT NULL, target_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, PRIMARY KEY (id),
+    UNIQUE (user_id, target_type, target_id)
+);

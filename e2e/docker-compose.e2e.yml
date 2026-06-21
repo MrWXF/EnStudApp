@@ -1,0 +1,30 @@
+# E2E 测试用的基础设施
+# 容器名加上 e2e 前缀，避免与 docker-compose.yml 中的服务冲突
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: e2e-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: enstud_app
+    ports:
+      - "13307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: e2e-redis
+    restart: unless-stopped
+    ports:
+      - "6380:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5

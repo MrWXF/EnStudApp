@@ -1,0 +1,27 @@
+# translate-service 集成测试 profile
+# 无数据库，禁用 Nacos/Redis/Redisson/DataSource/MyBatisPlus
+
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration
+      - org.springframework.boot.autoconfigure.jdbc.DataSourceTransactionManagerAutoConfiguration
+      - com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - com.alibaba.cloud.nacos.discovery.NacosDiscoveryClientAutoConfiguration
+
+# JWT（测试用固定密钥）
+jwt:
+  secret: test-secret-for-integration-tests-only
+
+# 日志
+logging:
+  level:
+    root: WARN
+    com.enstud: DEBUG
