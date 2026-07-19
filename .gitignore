@@ -49,3 +49,6 @@ mysql-data/
 redis-data/
 nacos-data/
 nacos-logs/
+
+# E2E test output
+e2e/test-results/
