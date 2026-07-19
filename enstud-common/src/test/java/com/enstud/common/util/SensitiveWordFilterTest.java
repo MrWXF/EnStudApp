@@ -67,7 +67,7 @@ class SensitiveWordFilterTest {
     @Test
     void replace_shouldHandleMultipleWordsInText() {
         assertEquals("**** this ****", filter.replace("shit this fuck"));
-        assertEquals("考试**和****都不对", filter.replace("考试作弊和代考都不对"));
+        assertEquals("考试**和**都不对", filter.replace("考试作弊和代考都不对"));
     }
 
     @Test

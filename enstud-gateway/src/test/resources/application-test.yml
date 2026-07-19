@@ -1,0 +1,23 @@
+spring:
+  config:
+    import: ''  # 覆盖主配置中的 application-common.yml（gateway 无 common 依赖）
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+      config:
+        enabled: false
+    gateway:
+      discovery:
+        locator:
+          enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+
+jwt:
+  secret: test-gateway-secret-key-for-integration-tests
+
+gateway:
+  white-list: /user/register,/user/login,/forum/posts,/forum/categories,/word/wordbooks,/writing/models

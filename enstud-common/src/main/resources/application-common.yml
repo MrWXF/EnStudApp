@@ -1,0 +1,18 @@
+# 公共配置 — 所有微服务共享
+# 各服务通过 spring.config.import: classpath:application-common.yml 引用
+
+# Actuator 健康检查 + 指标端点
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+  metrics:
+    export:
+      prometheus:
+        enabled: true

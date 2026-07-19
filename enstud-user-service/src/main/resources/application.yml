@@ -2,16 +2,22 @@ server:
   port: 8081
 
 spring:
+  config:
+    import: optional:classpath:application-common.yml
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
   application:
     name: enstud-user-service
   datasource:
-    url: jdbc:mysql://172.20.0.2:3306/enstud_app?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/enstud_app?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: root
     password: root
     driver-class-name: com.mysql.cj.jdbc.Driver
   redis:
-    host: 172.20.0.3
-    port: 6379
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
 
 # MyBatis-Plus
 mybatis-plus:

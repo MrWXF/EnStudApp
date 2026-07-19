@@ -1,0 +1,43 @@
+# 本地开发 profile — 无需 Nacos/Redis，H2 内存库
+spring:
+  cloud:
+    nacos:
+      discovery:
+        enabled: false
+        server-addr: ''
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
+      - com.alibaba.cloud.nacos.discovery.NacosDiscoveryClientAutoConfiguration
+      - com.alibaba.cloud.nacos.discovery.reactive.NacosReactiveDiscoveryClientAutoConfiguration
+      - org.springframework.cloud.openfeign.FeignAutoConfiguration
+      - org.springframework.cloud.loadbalancer.config.LoadBalancerAutoConfiguration
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;DATABASE_TO_UPPER=false
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:schema-h2.sql
+
+mybatis-plus:
+  configuration:
+    map-underscore-to-camel-case: true
+
+jwt:
+  secret: local-dev-secret-key-for-testing
+
+service:
+  word: http://localhost:8082
+  read: http://localhost:8087
+  writing: http://localhost:8084
+  chat: http://localhost:8083
+  forum: http://localhost:8086
+
+logging:
+  level:
+    root: WARN
+    com.enstud: INFO

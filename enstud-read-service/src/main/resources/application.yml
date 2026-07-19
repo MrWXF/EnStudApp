@@ -2,6 +2,8 @@ server:
   port: 8087
 
 spring:
+  config:
+    import: optional:classpath:application-common.yml
   application:
     name: enstud-read-service
   datasource:
