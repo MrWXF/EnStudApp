@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+        "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+        "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+
+<!--
+    Checkstyle 屏蔽规则
+    按需添加需要跳过检查的文件或规则
+-->
+<suppressions>
+    <!-- 示例：跳过所有测试文件的 MagicNumber 检查 -->
+    <!-- <suppress checks="MagicNumber" files=".*[\\/]src[\\/]test[\\/].*"/> -->
+
+    <!-- 示例：跳过特定文件 -->
+    <!-- <suppress checks=".*" files="com[\\/]enstud[\\/]common[\\/]JwtUtil\.java"/> -->
+</suppressions>
