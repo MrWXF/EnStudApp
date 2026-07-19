@@ -1,0 +1,279 @@
+name: EnStudApp CD — Build, Push & Deploy
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: '版本号 (如 v1.2.3，留空则用 latest)'
+        required: false
+        default: ''
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ${{ github.repository }}
+
+jobs:
+  # ============================
+  # 1. 构建后端 JAR + 前端 dist
+  # ============================
+  build:
+    name: Build All Artifacts
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve Version
+        id: version
+        run: |
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            echo "version=${{ github.event.inputs.version }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build Backend JARs
+        run: mvn clean package -DskipTests -q
+        timeout-minutes: 15
+
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: enstud-frontend/package-lock.json
+
+      - name: Build Frontend
+        working-directory: enstud-frontend
+        run: |
+          npm ci
+          npm run build
+
+      - name: Upload Backend JARs
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-jars
+          path: |
+            enstud-*/target/*.jar
+          retention-days: 1
+
+      - name: Upload Frontend dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: enstud-frontend/dist/
+          retention-days: 1
+
+  # ============================
+  # 2. 构建 & 推送 Docker 镜像
+  # ============================
+  docker:
+    name: Docker Build & Push
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: user-service
+            dockerfile: enstud-user-service/Dockerfile
+            context: .
+          - service: word-service
+            dockerfile: enstud-word-service/Dockerfile
+            context: .
+          - service: chat-service
+            dockerfile: enstud-chat-service/Dockerfile
+            context: .
+          - service: writing-service
+            dockerfile: enstud-writing-service/Dockerfile
+            context: .
+          - service: translate-service
+            dockerfile: enstud-translate-service/Dockerfile
+            context: .
+          - service: forum-service
+            dockerfile: enstud-forum-service/Dockerfile
+            context: .
+          - service: gateway
+            dockerfile: enstud-gateway/Dockerfile
+            context: .
+          - service: nginx
+            dockerfile: nginx/Dockerfile
+            context: .
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Backend JARs
+        uses: actions/download-artifact@v4
+        with:
+          name: backend-jars
+
+      - name: Restore JAR Locations
+        run: |
+          for jar in enstud-*/target/*.jar; do
+            dir=$(dirname "$jar")
+            mkdir -p "$dir"
+            mv "$(basename "$jar")" "$jar" 2>/dev/null || true
+          done
+          # Handle the flat download: move JARs back to their target dirs
+          for f in *.jar; do
+            svc=$(echo "$f" | sed 's/-[0-9].*//')
+            mkdir -p "$svc/target"
+            mv "$f" "$svc/target/"
+          done
+
+      - name: Restore Frontend dist
+        if: matrix.service == 'nginx'
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: enstud-frontend/dist/
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build & Push (${{ matrix.service }})
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:${{ needs.build.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:latest
+          labels: |
+            org.opencontainers.image.version=${{ needs.build.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+
+  # ============================
+  # 3. 远程部署
+  # ============================
+  deploy:
+    name: Deploy to Production
+    needs: docker
+    runs-on: ubuntu-latest
+    if: success()
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          script: |
+            set -e
+
+            cd /opt/enstud || exit 1
+
+            # 设定版本
+            VERSION="${{ needs.build.outputs.version }}"
+
+            # 记录当前版本（用于失败回滚）
+            if [ -f .version ]; then
+              echo "PREV_VERSION=$(cat .version)" >> "$GITHUB_ENV"
+            fi
+
+            # 部署前备份数据库
+            echo "Backing up database..."
+            BACKUP_DIR="backups"
+            mkdir -p "$BACKUP_DIR"
+            BACKUP_FILE="${BACKUP_DIR}/enstud_pre_deploy_$(date +%Y%m%d_%H%M%S).sql"
+            docker exec enstud-mysql mysqldump -uroot -p"${MYSQL_ROOT_PASSWORD}" enstud_app > "$BACKUP_FILE" 2>/dev/null || echo "Backup skipped (MySQL not accessible)"
+            # 保留最近 7 个备份
+            ls -t ${BACKUP_DIR}/enstud_pre_deploy_*.sql 2>/dev/null | tail -n +8 | xargs rm -f
+
+            # 执行数据库迁移
+            echo "Running database migrations..."
+            if [ -d sql/migrations ]; then
+              for f in $(ls sql/migrations/*.sql 2>/dev/null | sort); do
+                name=$(basename "$f")
+                docker exec -i enstud-mysql mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" enstud_app < "$f" 2>/dev/null && \
+                  echo "  ✓ $name" || echo "  ⚠ $name (may already exist)"
+              done
+            fi
+
+            # 拉取镜像
+            echo "Pulling images (version: ${VERSION})..."
+            IMAGE_TAG="$VERSION" docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
+
+            # 滚动重启（--no-build 跳过本地构建，直接使用拉取的镜像）
+            IMAGE_TAG="$VERSION" docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans --no-build
+
+            # 等待启动
+            echo "Waiting for services to be healthy..."
+            sleep 15
+
+            # 验证核心服务
+            FAILED=0
+
+            # Gateway: actuator/health
+            for i in $(seq 1 20); do
+              if curl -sf http://localhost:8080/actuator/health > /dev/null 2>&1; then
+                echo "✓ gateway is healthy"
+                break
+              fi
+              [ $i -eq 20 ] && { echo "✗ gateway failed"; FAILED=1; }
+              sleep 3
+            done
+
+            # Nginx: 根路径
+            for i in $(seq 1 10); do
+              if curl -sf http://localhost:80/ > /dev/null 2>&1; then
+                echo "✓ nginx is healthy"
+                break
+              fi
+              [ $i -eq 10 ] && { echo "✗ nginx failed"; FAILED=1; }
+              sleep 3
+            done
+
+            if [ "$FAILED" -eq 1 ]; then
+              echo "Deploy FAILED. Rolling back..."
+              PREV="${PREV_VERSION:-latest}"
+              IMAGE_TAG="$PREV" docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --remove-orphans --no-build
+              exit 1
+            fi
+
+            # 标记部署版本
+            echo "$VERSION" > .version
+
+            # 清理旧镜像
+            docker image prune -af --filter "until=24h"
+            echo "✓ Deploy complete — ${VERSION}"
+
+      - name: Notify Deploy Result
+        if: always()
+        uses: distributhor/workflow-webhook@v3
+        with:
+          webhook_url: ${{ secrets.DEPLOY_WEBHOOK_URL || '' }}
+          webhook_type: json
+          data: |
+            {
+              "app": "EnStudApp",
+              "version": "${{ needs.build.outputs.version }}",
+              "status": "${{ job.status }}",
+              "env": "production",
+              "time": "${{ github.event.head_commit.timestamp }}"
+            }
+        continue-on-error: true
