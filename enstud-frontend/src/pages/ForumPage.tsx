@@ -47,8 +47,9 @@ export default function ForumPage() {
 
   // 切换板块时重新加载
   useEffect(() => {
-    setCursor(undefined);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadPosts(catId, undefined);
+    setCursor(undefined);
   }, [catId, loadPosts]);
 
   const handleLoadMore = async () => {

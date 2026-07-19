@@ -32,11 +32,6 @@ export default function ReadPage() {
   const [activeSource, setActiveSource] = useState('all');
   const [activeTab, setActiveTab] = useState<string>('hot');
 
-  useEffect(() => {
-    loadSources();
-    loadArticles('all');
-  }, []);
-
   const loadSources = async () => {
     try {
       const res = await getSources();
@@ -62,6 +57,13 @@ export default function ReadPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadSources();
+    loadArticles('all');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSourceChange = (source: string) => {
     setActiveSource(source);

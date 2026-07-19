@@ -25,7 +25,7 @@ export default function DashboardPage() {
 
   useEffect(() => {
     getUserStats()
-      .then((res: any) => setStats(res.data))
+      .then((res: { data: UserStats }) => setStats(res.data))
       .finally(() => setLoading(false));
   }, []);
 

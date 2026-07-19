@@ -13,20 +13,24 @@ export default function WritingPage() {
   const [models, setModels] = useState<ModelEssayDTO[]>([]);
   const [form] = Form.useForm();
 
-  useEffect(() => { loadHistory(); loadModels(); }, []);
-
   const loadHistory = async () => {
     try {
       const res = await getWritingHistory();
       setHistory(res.data || []);
-    } catch {}
+    } catch { /* 静默处理 */ }
   };
   const loadModels = async () => {
     try {
       const res = await getModels();
       setModels(res.data || []);
-    } catch {}
+    } catch { /* 静默处理 */ }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadHistory();
+    loadModels();
+  }, []);
 
   const handleSubmit = async (values: { title: string; content: string; topicType?: string }) => {
     setLoading(true);

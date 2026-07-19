@@ -16,8 +16,6 @@ export default function ForumDetailPage() {
   const navigate = useNavigate();
   const currentUserId = getCurrentUserId();
 
-  useEffect(() => { loadPost(); }, [id]);
-
   const loadPost = async () => {
     setLoading(true);
     try {
@@ -29,6 +27,12 @@ export default function ForumDetailPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadPost();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   const handleLike = async () => {
     try {

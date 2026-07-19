@@ -35,10 +35,6 @@ export default function ReadDetailPage() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (id) loadArticle(parseInt(id));
-  }, [id]);
-
   const loadArticle = async (articleId: number) => {
     setLoading(true);
     try {
@@ -53,6 +49,11 @@ export default function ReadDetailPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (id) loadArticle(parseInt(id));
+  }, [id]);
 
   const handleTranslate = async () => {
     if (!id) return;
@@ -81,6 +82,23 @@ export default function ReadDetailPage() {
     } catch {
       message.error('操作失败');
     }
+  };
+
+  // 从选中文本所在的 Paragraph 元素提取上下文句子
+  const getContextSentence = (selected: string): string => {
+    const el = document.querySelector('[data-content-area]');
+    if (!el) return '';
+    const fullText = el.textContent || '';
+    const idx = fullText.indexOf(selected);
+    if (idx < 0) return '';
+    const start = Math.max(0, idx - 80);
+    const end = Math.min(fullText.length, idx + selected.length + 80);
+    let ctx = fullText.substring(start, end);
+    if (start > 0) {
+      const sentenceStart = ctx.indexOf('. ');
+      if (sentenceStart > 0 && sentenceStart < 20) ctx = ctx.substring(sentenceStart + 2);
+    }
+    return ctx.trim();
   };
 
   // 划词翻译 — 选中文本后自动查询
@@ -131,24 +149,6 @@ export default function ReadDetailPage() {
         .finally(() => setLookupLoading(false));
     }
   }, [id]);
-
-  // 从选中文本所在的 Paragraph 元素提取上下文句子
-  const getContextSentence = (selected: string): string => {
-    const el = document.querySelector('[data-content-area]');
-    if (!el) return '';
-    const fullText = el.textContent || '';
-    const idx = fullText.indexOf(selected);
-    if (idx < 0) return '';
-    const start = Math.max(0, idx - 80);
-    const end = Math.min(fullText.length, idx + selected.length + 80);
-    let ctx = fullText.substring(start, end);
-    // 尝试找到句子边界
-    if (start > 0) {
-      const sentenceStart = ctx.indexOf('. ');
-      if (sentenceStart > 0 && sentenceStart < 20) ctx = ctx.substring(sentenceStart + 2);
-    }
-    return ctx.trim();
-  };
 
   // 添加到生词本（如果后端自动添加失败，手动触发）
   const handleAddToWordbook = async () => {

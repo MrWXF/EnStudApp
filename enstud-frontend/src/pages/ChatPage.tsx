@@ -13,16 +13,22 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => { loadSessions(); }, []);
-  useEffect(() => { if (activeSession) loadMessages(activeSession); }, [activeSession]);
-  useEffect(() => { listRef.current?.scrollTo(0, listRef.current.scrollHeight); }, [messages]);
-
   const loadSessions = async () => {
-    try { const res = await getSessions(); setSessions(res.data || []); } catch {}
+    try { const res = await getSessions(); setSessions(res.data || []); } catch { /* 静默处理 */ }
   };
   const loadMessages = async (id: number) => {
-    try { const res = await getMessages(id); setMessages(res.data || []); } catch {}
+    try { const res = await getMessages(id); setMessages(res.data || []); } catch { /* 静默处理 */ }
   };
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    loadSessions();
+  }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (activeSession) loadMessages(activeSession);
+  }, [activeSession]);
+  useEffect(() => { listRef.current?.scrollTo(0, listRef.current.scrollHeight); }, [messages]);
 
   const handleNewSession = async () => {
     try {

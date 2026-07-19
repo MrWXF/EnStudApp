@@ -9,17 +9,24 @@ test.describe('Authentication', () => {
   })
 
   test('register via API creates new user', async ({ page }) => {
-    const result = await registerViaApi(page, `e2euser_${Date.now()}`, 'Test@1234', `e2e_${Date.now()}@example.com`)
+    const ts = Date.now()
+    const result = await registerViaApi(page, `e2e_${ts}`, 'Test@1234', `e2e_${ts}@test.com`)
     expect(result.code).toBe(0)
   })
 
   test('duplicate username registration is rejected', async ({ page }) => {
-    const username = `duptest_${Date.now()}`
-    // First registration should succeed
-    await registerViaApi(page, username, 'Test@1234', `${username}@example.com`)
-    // Duplicate should fail
-    const result = await registerViaApi(page, username, 'Test@1234', `other_${username}@example.com`)
+    const ts = Date.now()
+    const username = `dupe2e_${ts}`
+    await registerViaApi(page, username, 'Test@1234', `${username}@test.com`)
+    const result = await registerViaApi(page, username, 'Test@1234', `other_${ts}@test.com`)
     expect(result.code).toBe(1002)
+  })
+
+  test('login via API — token persists across page navigation', async ({ page }) => {
+    await loginViaApi(page, '/word')
+    await page.waitForTimeout(2000)
+    // Should stay on word page (not redirect to login)
+    expect(page.url()).toContain('/word')
   })
 
   test('protected route redirects to login when unauthenticated', async ({ page }) => {
