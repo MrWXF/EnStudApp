@@ -64,4 +64,26 @@ class WritingIntegrationTest extends DbIntegrationTest {
         deleteWithAuth("/writing/" + writingId, USER_ID, USERNAME)
                 .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0));
     }
+
+    @Test @Order(7) @DisplayName("获取范文（不同话题）")
+    void shouldGetModelEssaysByTopic() throws Exception {
+        getWithoutAuth("/writing/models?topicType=LETTER")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test @Order(8) @DisplayName("提交作文缺少标题 → 400")
+    void shouldRejectMissingTitle() throws Exception {
+        Map<String, String> body = Map.of("content", "Test content here.");
+        postWithoutAuth("/writing/submit", body)
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test @Order(9) @DisplayName("得分应为有效数字")
+    void shouldHaveValidScore() throws Exception {
+        Map<String, String> body = Map.of("title", "Score Test", "content",
+                "This is a valid English essay for testing scoring.", "topicType", "ESSAY");
+        postWithAuth("/writing/submit", body, USER_ID, "scorer")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.score").isNumber());
+    }
 }

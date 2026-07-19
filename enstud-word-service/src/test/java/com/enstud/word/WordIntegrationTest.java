@@ -132,6 +132,19 @@ class WordIntegrationTest extends DbIntegrationTest {
         Assertions.assertEquals(1, count);
     }
 
+    @Test @Order(12) @DisplayName("按等级查询单词列表")
+    void shouldGetWordsByMemoryLevel() throws Exception {
+        getWithAuth("/word/memory-level/words?level=0", TEST_USER_ID, TEST_USERNAME)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test @Order(13) @DisplayName("学习后的单词出现在待复习列表")
+    void shouldHaveStudyRecordAfterReview() throws Exception {
+        // word 1 was reviewed in test 6 — record should exist
+        Integer count = queryInt("SELECT COUNT(*) FROM enstud_user_word_record WHERE user_id=? AND word_id=?", TEST_USER_ID, 1L);
+        Assertions.assertEquals(1, count);
+    }
+
     private void submitReview(Long wordId, int quality) throws Exception {
         mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
                         .post("/word/review").param("wordId", wordId.toString()).param("quality", String.valueOf(quality))

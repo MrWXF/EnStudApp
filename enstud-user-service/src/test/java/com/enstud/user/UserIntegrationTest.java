@@ -195,4 +195,42 @@ class UserIntegrationTest extends DbIntegrationTest {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.data", not(emptyString())));
     }
+
+    // ==================== 边界场景 ====================
+
+    @Test
+    @Order(12)
+    @DisplayName("注册缺少必填字段 → 400")
+    void shouldRejectMissingFields() throws Exception {
+        Map<String, String> body = Map.of("username", "nofield");
+        postWithoutAuth("/user/register", body)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
+    }
+
+    @Test
+    @Order(13)
+    @DisplayName("多次登录获取有效 Token")
+    void shouldLoginMultipleTimes() throws Exception {
+        Map<String, String> body = Map.of(
+                "username", TEST_USERNAME,
+                "password", TEST_PASSWORD
+        );
+
+        String token1 = objectMapper.readTree(
+                postWithoutAuth("/user/login", body)
+                        .andExpect(status().isOk())
+                        .andExpect(jsonPath("$.code").value(0))
+                        .andReturn().getResponse().getContentAsString())
+                .get("data").get("accessToken").asText();
+
+        Assertions.assertNotNull(token1);
+        Assertions.assertFalse(token1.isEmpty());
+
+        // 第二次登录应同样成功
+        postWithoutAuth("/user/login", body)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.accessToken", not(emptyString())));
+    }
 }

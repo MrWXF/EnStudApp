@@ -82,4 +82,22 @@ class ReadIntegrationTest extends DbIntegrationTest {
         getWithAuth("/read/sources", USER_ID, USERNAME)
                 .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0));
     }
+
+    @Test @Order(9) @DisplayName("按来源过滤文章")
+    void shouldFilterArticlesBySource() throws Exception {
+        getWithAuth("/read/hot?source=HN", USER_ID, USERNAME)
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test @Order(10) @DisplayName("多次 toggle 书签不报错")
+    void shouldToggleBookmarkMultipleTimes() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/read/1/bookmark")
+                        .header("X-User-Id", USER_ID.toString()).header("X-Username", USERNAME))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/read/1/bookmark")
+                        .header("X-User-Id", USER_ID.toString()).header("X-Username", USERNAME))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0));
+    }
 }

@@ -94,7 +94,21 @@ class ForumIntegrationTest extends DbIntegrationTest {
                 .andExpect(jsonPath("$.code").value(not(0)));
     }
 
-    @Test @Order(10) @DisplayName("删除自己的帖子")
+    @Test @Order(10) @DisplayName("按分类过滤帖子")
+    void shouldFilterPostsByCategory() throws Exception {
+        getWithoutAuth("/forum/posts?categoryId=1")
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data", hasSize(greaterThanOrEqualTo(1))));
+    }
+
+    @Test @Order(11) @DisplayName("获取不存在的帖子 → code!=0")
+    void shouldRejectNonExistentPost() throws Exception {
+        getWithoutAuth("/forum/posts/99999")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(not(0)));
+    }
+
+    @Test @Order(12) @DisplayName("删除自己的帖子")
     void shouldDeleteOwnPost() throws Exception {
         deleteWithAuth("/forum/posts/" + postId, USER_A, USERNAME_A)
                 .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0));

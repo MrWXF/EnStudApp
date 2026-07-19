@@ -143,4 +143,41 @@ class TranslateIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0));
     }
+
+    @Test
+    @DisplayName("单词翻译：单个英文词 → 返回释义")
+    void shouldTranslateSingleWord() throws Exception {
+        Map<String, String> body = Map.of("text", "serendipity", "from", "en", "to", "zh");
+
+        mockMvc.perform(post("/translate/text")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.translatedText", not(emptyString())));
+    }
+
+    @Test
+    @DisplayName("指定 from 语言翻译")
+    void shouldTranslateWithSpecificSourceLanguage() throws Exception {
+        Map<String, String> body = Map.of("text", "bonjour", "from", "fr", "to", "zh");
+
+        mockMvc.perform(post("/translate/text")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+    }
+
+    @Test
+    @DisplayName("中文数字混合文本翻译")
+    void shouldTranslateMixedContent() throws Exception {
+        Map<String, String> body = Map.of("text", "The price is 100 dollars.", "from", "en", "to", "zh");
+
+        mockMvc.perform(post("/translate/text")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0));
+    }
 }

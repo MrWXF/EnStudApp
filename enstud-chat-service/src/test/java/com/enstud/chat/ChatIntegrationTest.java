@@ -76,4 +76,22 @@ class ChatIntegrationTest extends DbIntegrationTest {
         deleteWithAuth("/chat/sessions/99999", USER_ID, USERNAME)
                 .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(3001));
     }
+
+    @Test @Order(9) @DisplayName("不同场景创建会话")
+    void shouldCreateSessionWithScenario() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/chat/sessions").param("scenario", "DAILY")
+                        .header("X-User-Id", USER_ID.toString()).header("X-Username", USERNAME))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.data.id", notNullValue()));
+    }
+
+    @Test @Order(10) @DisplayName("发送空消息 → 拒绝")
+    void shouldRejectEmptyMessage() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .post("/chat/sessions/" + sessionId + "/messages").param("content", "")
+                        .header("X-User-Id", USER_ID.toString()).header("X-Username", USERNAME))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(not(0)));
+    }
 }
