@@ -4,6 +4,7 @@ import com.enstud.chat.dto.MessageDTO;
 import com.enstud.chat.dto.SendMessageResponse;
 import com.enstud.chat.dto.SessionDTO;
 import com.enstud.chat.service.ChatService;
+import com.enstud.chat.service.ReviewSessionService;
 import com.enstud.common.Result;
 import com.enstud.common.SecurityContext;
 import io.swagger.v3.oas.annotations.Operation;
@@ -13,13 +14,14 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "AI 对话", description = "AI 英语日常聊天")
+@Tag(name = "AI 对话", description = "AI 英语日常聊天 + 复习对话")
 @RestController
 @RequestMapping("/chat")
 @RequiredArgsConstructor
 public class ChatController {
 
     private final ChatService chatService;
+    private final ReviewSessionService reviewSessionService;
 
     @Operation(summary = "开始新会话")
     @PostMapping("/sessions")
@@ -60,5 +62,23 @@ public class ChatController {
         if (userId == null) return Result.fail(401, "请先登录");
         chatService.deleteSession(userId, sessionId);
         return Result.success();
+    }
+
+    // ==================== 学习闭环：复习对话 ====================
+
+    @Operation(summary = "开始复习对话 — AI 围绕用户待复习单词生成对话")
+    @PostMapping("/review-session")
+    public Result<SendMessageResponse> startReviewSession() {
+        Long userId = SecurityContext.getCurrentUserId();
+        if (userId == null) return Result.fail(401, "请先登录");
+        return Result.success(reviewSessionService.startReviewSession());
+    }
+
+    @Operation(summary = "单词练习对话 — AI 围绕指定单词生成练习")
+    @PostMapping("/word-practice/{wordId}")
+    public Result<SendMessageResponse> startWordPractice(@PathVariable Long wordId) {
+        Long userId = SecurityContext.getCurrentUserId();
+        if (userId == null) return Result.fail(401, "请先登录");
+        return Result.success(reviewSessionService.startWordPractice(wordId));
     }
 }

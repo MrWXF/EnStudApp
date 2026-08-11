@@ -1,13 +1,18 @@
 import { useState, useEffect } from 'react';
-import { Card, Row, Col, Statistic, Spin, Typography, Progress } from 'antd';
+import { Card, Row, Col, Statistic, Spin, Typography, Progress, Button, Tag, Space } from 'antd';
 import {
   BookOutlined, ReadOutlined, EditOutlined,
-  MessageOutlined, TeamOutlined, RiseOutlined, FireOutlined,
+  MessageOutlined, RiseOutlined, FireOutlined,
+  RobotOutlined, ThunderboltOutlined,
 } from '@ant-design/icons';
-import { getUserStats } from '../api';
-import type { UserStats } from '../types';
+import { getUserStats, getAiUsage } from '../api/dashboard';
+import { getRecommendedArticles } from '../api/reading';
+import type { AiUsageResponse, AiUsageDetail } from '../api/dashboard';
+import type { UserStats, ArticleDTO } from '../types';
+import { useDashboardStore } from '../stores';
+import { useNavigate } from 'react-router-dom';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 /** 记忆等级色板 */
 const LEVEL_CONFIG = [
@@ -21,11 +26,33 @@ const LEVEL_CONFIG = [
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [aiUsage, setAiUsage] = useState<AiUsageResponse | null>(null);
+  const [recommendedArticles, setRecommendedArticles] = useState<ArticleDTO[]>([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { setStats: setStoreStats } = useDashboardStore();
 
   useEffect(() => {
-    getUserStats()
-      .then((res: { data: UserStats }) => setStats(res.data))
+    Promise.all([
+      getUserStats().then((res: { data: UserStats }) => res.data),
+      getAiUsage().then((res: { data: AiUsageResponse }) => res.data).catch(() => null),
+      getRecommendedArticles(6).then((res: { data: ArticleDTO[] }) => res.data).catch(() => []),
+    ])
+      .then(([statsData, usageData, articles]) => {
+        setStats(statsData);
+        setAiUsage(usageData);
+        setRecommendedArticles(articles);
+        if (statsData) {
+          setStoreStats({
+            wordsToday: statsData.todayLearnedWords,
+            wordsTotal: statsData.totalLearnedWords,
+            articlesRead: statsData.totalReadArticles,
+            chatCount: statsData.totalChats,
+            writingCount: statsData.totalWritings,
+            streak: statsData.streakDays,
+          });
+        }
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -41,7 +68,7 @@ export default function DashboardPage() {
         <RiseOutlined /> 学习仪表盘
       </Title>
 
-      {/* 顶部统计卡片 */}
+      {/* 顶部统计卡片 — 四维度学习进度 */}
       <Row gutter={[16, 16]}>
         <Col xs={12} sm={8} lg={4}>
           <Card hoverable>
@@ -69,12 +96,6 @@ export default function DashboardPage() {
           </Card>
         </Col>
         <Col xs={12} sm={8} lg={4}>
-          <Card hoverable>
-            <Statistic title="帖子" value={stats.totalPosts} prefix={<TeamOutlined />} suffix="条" />
-          </Card>
-        </Col>
-        {/* 连续学习天数 */}
-        <Col xs={12} sm={8} lg={4}>
           <Card
             hoverable
             style={stats.streakDays >= 7 ? { borderColor: '#ff4d4f', background: '#fff2f0' } : {}}
@@ -95,9 +116,96 @@ export default function DashboardPage() {
         </Col>
       </Row>
 
-      {/* 第二行：写作均分 + 记忆等级分布 */}
+      {/* AI 每日用量 + 学习闭环快捷入口 */}
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
-        {/* 写作均分 */}
+        {/* AI 用量进度条 */}
+        {aiUsage && (
+          <Col xs={24} md={12}>
+            <Card title={<><RobotOutlined /> AI 今日用量</>} size="small">
+              <Space direction="vertical" style={{ width: '100%' }}>
+                {Object.entries(aiUsage.features).map(([key, detail]: [string, AiUsageDetail]) => (
+                  <div key={key}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                      <Text>
+                        {key === 'chat' ? '💬 对话' : key === 'writing' ? '✍️ 写作' : '🌐 翻译'}
+                      </Text>
+                      <Text type="secondary">{detail.usedToday} / {detail.dailyLimit}</Text>
+                    </div>
+                    <Progress
+                      percent={detail.dailyLimit > 0 ? Math.round((detail.usedToday / detail.dailyLimit) * 100) : 0}
+                      strokeColor={detail.usedToday >= detail.dailyLimit ? '#ff4d4f' : '#1677ff'}
+                      size="small"
+                    />
+                  </div>
+                ))}
+              </Space>
+            </Card>
+          </Col>
+        )}
+
+        {/* 学习闭环快捷入口 */}
+        <Col xs={24} md={aiUsage ? 12 : 24}>
+          <Card title={<><ThunderboltOutlined /> 快捷入口</>} size="small">
+            <Space wrap>
+              <Button type="primary" icon={<RobotOutlined />} onClick={() => navigate('/chat')}>
+                🤖 AI 复习对话
+              </Button>
+              <Button icon={<ReadOutlined />} onClick={() => navigate('/read')}>
+                📖 推荐文章
+              </Button>
+              <Button icon={<EditOutlined />} onClick={() => navigate('/writing')}>
+                ✍️ 开始写作
+              </Button>
+              <Button icon={<BookOutlined />} onClick={() => navigate('/word')}>
+                📚 背单词
+              </Button>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
+
+      {/* 推荐文章（学习闭环） */}
+      {recommendedArticles.length > 0 && (
+        <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
+          <Col span={24}>
+            <Card
+              title="📖 为你推荐 — 包含你正在学习的单词"
+              extra={<Button type="link" onClick={() => navigate('/read')}>查看全部</Button>}
+            >
+              <Row gutter={[12, 12]}>
+                {recommendedArticles.map((article) => (
+                  <Col xs={24} sm={12} md={8} key={article.id}>
+                    <Card
+                      hoverable
+                      size="small"
+                      onClick={() => navigate(`/read/${article.id}`)}
+                      style={{ height: '100%' }}
+                    >
+                      <Card.Meta
+                        title={article.title}
+                        description={
+                          <div>
+                            <Text type="secondary" ellipsis style={{ fontSize: 12 }}>
+                              {article.summary}
+                            </Text>
+                            <div style={{ marginTop: 8 }}>
+                              <Tag color="blue">{article.source}</Tag>
+                              {article.bookmarked && <Tag color="gold">已收藏</Tag>}
+                            </div>
+                          </div>
+                        }
+                      />
+                    </Card>
+                  </Col>
+                ))}
+              </Row>
+            </Card>
+          </Col>
+        </Row>
+      )}
+
+      {/* 记忆等级分布 */}
+      <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         <Col xs={24} md={8}>
           <Card title="写作平均得分">
             <div style={{ textAlign: 'center', padding: '24px 0' }}>
@@ -112,7 +220,6 @@ export default function DashboardPage() {
           </Card>
         </Col>
 
-        {/* 记忆等级分布 */}
         <Col xs={24} md={16}>
           <Card title="单词记忆等级分布">
             <Row gutter={[12, 12]}>

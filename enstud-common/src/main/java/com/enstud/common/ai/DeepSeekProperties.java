@@ -59,4 +59,24 @@ public class DeepSeekProperties {
      * AI 生成内容时可能较慢，建议设置不少于 30 秒。
      */
     private int timeout = 60;
+
+    // ==================== AI 每日配额 ====================
+
+    /**
+     * AI 对话每日调用上限（每用户）
+     * <p>0 或负数表示不限制
+     */
+    private int chatDailyLimit = 50;
+
+    /**
+     * AI 写作批改每日调用上限（每用户）
+     * <p>0 或负数表示不限制
+     */
+    private int writingDailyLimit = 10;
+
+    /**
+     * AI 翻译每日调用上限（每用户）
+     * <p>0 或负数表示不限制
+     */
+    private int translateDailyLimit = 100;
 }

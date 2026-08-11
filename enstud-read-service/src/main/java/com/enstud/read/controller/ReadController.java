@@ -89,4 +89,16 @@ public class ReadController {
         WordLookupResponse response = readService.wordLookup(userId, request);
         return Result.success(response);
     }
+
+    // ==================== 学习闭环：基于学习单词的文章推荐 ====================
+
+    @Operation(summary = "获取推荐文章 — 优先展示包含用户正在学习单词的文章")
+    @GetMapping("/recommended")
+    public Result<List<ArticleDTO>> getRecommendedArticles(
+            @Parameter(description = "最多返回数量")
+            @RequestParam(defaultValue = "10") int limit) {
+        Long userId = SecurityContext.getCurrentUserId();
+        if (userId == null) return Result.fail(401, "请先登录");
+        return Result.success(readService.getRecommendedArticles(userId, limit));
+    }
 }

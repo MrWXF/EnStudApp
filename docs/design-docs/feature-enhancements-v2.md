@@ -2,6 +2,8 @@
 
 > 基于现有架构（Spring Boot 3.2.4 + Spring Cloud Alibaba + React + Ant Design Mobile）提出的三大功能增强 + 两个系统优化 + 测试策略
 
+> **⚠️ 状态说明（2026-07-31）**：本方案中"一、阅读与单词联动"功能已在 `enstud-read-service` 实现（含 `/read/{id}/translate`、划词查词、文章收藏、同步等 API）。其余功能（仪表盘 / 热力图 / 目标管理 / 错词本 / 敏感词过滤）请对照代码确认落地状态后再开工。
+
 ---
 
 ## 目录

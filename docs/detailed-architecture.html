@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EnStudApp 详细架构图</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #7f8c8d;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+        .section {
+            margin: 50px 0;
+            padding: 30px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        .section-title {
+            color: #2c3e50;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 3px solid #667eea;
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+            margin: 30px 0;
+            overflow-x: auto;
+        }
+        .legend {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.95em;
+        }
+        .legend-color {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+        .info-box {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+        .info-box h3 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .tech-stack {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .tech-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+        .tech-item strong {
+            color: #667eea;
+            display: block;
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎓 EnStudApp 详细架构图</h1>
+        <p class="subtitle">英语学习助手 · Spring Cloud 微服务架构 · 完整调用链路</p>
+
+        <!-- ==================== 1. 总体架构 ==================== -->
+        <div class="section">
+            <h2 class="section-title">📐 1. 总体架构视图</h2>
+            <div class="mermaid">
+graph TB
+    subgraph "🌐 客户端层"
+        WEB[Web 浏览器<br/>React 19 + TypeScript 6]
+        MOBILE[移动端浏览器<br/>Ant Design Mobile 6.x]
+    end
+
+    subgraph "🔀 接入层"
+        NGINX[Nginx<br/>:80<br/>────────<br/>• 静态资源服务<br/>• 反向代理 /api/*<br/>• Gzip 压缩<br/>• SSL 终端]
+    end
+
+    subgraph "🚪 API 网关层"
+        GW[Spring Cloud Gateway<br/>:8080<br/>────────<br/>• JwtAuthFilter 认证<br/>• 路由转发<br/>• 限流 Sentinel<br/>• 请求日志<br/>• CORS 处理]
+    end
+
+    subgraph "🔧 微服务层 - Spring Boot 3.2.4 + Spring Cloud 2023.0.1.2"
+        direction TB
+
+        subgraph "用户域"
+            USER[user-service<br/>:8081<br/>────────<br/>Controller<br/>↓ Service<br/>↓ Mapper<br/>────────<br/>• 注册/登录<br/>• JWT 签发<br/>• 用户信息<br/>• 积分等级]
+        end
+
+        subgraph "学习域"
+            WORD[word-service<br/>:8082<br/>────────<br/>Controller<br/>↓ Service<br/>↓ Mapper<br/>────────<br/>• 词库管理<br/>• 学习记录<br/>• 记忆算法<br/>• 错词本]
+
+            READ[read-service<br/>:8087<br/>────────<br/>Controller<br/>↓ Service<br/>↓ Mapper<br/>────────<br/>• 文章阅读<br/>• 查词联动<br/>• 阅读记录<br/>• 文章同步]
+        end
+
+        subgraph "AI 域"
+            CHAT[chat-service<br/>:8083<br/>────────<br/>Controller<br/>↓ Service<br/>↓ Mapper<br/>────────<br/>• AI 对话<br/>• 语法纠正<br/>• 话题推荐<br/>• 聊天历史]
+
+            WRITE[writing-service<br/>:8084<br/>────────<br/>Controller<br/>↓ Service<br/>↓ Mapper<br/>────────<br/>• 作文提交<br/>• 智能批改<br/>• 范文推荐<br/>• 写作统计]
+        end
+
+        subgraph "工具域"
+            TRANS[translate-service<br/>:8085<br/>────────<br/>Controller<br/>↓ Service<br/>↓ Mapper<br/>────────<br/>• 文本翻译<br/>• 语音翻译<br/>• 图片翻译<br/>• 翻译历史]
+        end
+
+        subgraph "社区域"
+            FORUM[forum-service<br/>:8086<br/>────────<br/>Controller<br/>↓ Service<br/>↓ Mapper<br/>────────<br/>• 帖子发布<br/>• 回复互动<br/>• 点赞收藏<br/>• 标签搜索]
+        end
+    end
+
+    subgraph "🗄️ 数据存储层"
+        MYSQL[(MySQL 8.0<br/>:13306<br/>────────<br/>• 用户数据<br/>• 词库数据<br/>• 业务数据<br/>• 索引优化)]
+        REDIS[(Redis 7.x<br/>:6379<br/>────────<br/>• 会话缓存<br/>• Token 存储<br/>• 热点数据<br/>• 分布式锁)]
+    end
+
+    subgraph "🔍 服务治理层"
+        NACOS[Nacos 2.2.3<br/>:8848<br/>────────<br/>• 服务注册<br/>• 服务发现<br/>• 配置中心<br/>• 动态路由]
+    end
+
+    subgraph "📊 可观测性层"
+        PROM[Prometheus<br/>:9090<br/>• 指标采集]
+        GRAF[Grafana<br/>:3000<br/>• 监控面板]
+        LOKI[Loki<br/>:3100<br/>• 日志聚合]
+    end
+
+    subgraph "🤖 外部服务"
+        AI[DeepSeek API<br/>• AI 对话<br/>• 语法纠正<br/>• 作文批改]
+    end
+
+    %% 客户端到接入层
+    WEB --> NGINX
+    MOBILE --> NGINX
+
+    %% 接入层到网关
+    NGINX -->|/api/*| GW
+    NGINX -->|静态资源| WEB
+
+    %% 网关到服务
+    GW -->|/api/user/**| USER
+    GW -->|/api/word/**| WORD
+    GW -->|/api/chat/**| CHAT
+    GW -->|/api/writing/**| WRITE
+    GW -->|/api/translate/**| TRANS
+    GW -->|/api/forum/**| FORUM
+    GW -->|/api/read/**| READ
+
+    %% 服务到存储
+    USER --> MYSQL
+    USER --> REDIS
+    WORD --> MYSQL
+    WORD --> REDIS
+    READ --> MYSQL
+    READ --> REDIS
+    CHAT --> MYSQL
+    CHAT --> REDIS
+    WRITE --> MYSQL
+    WRITE --> REDIS
+    TRANS --> REDIS
+    FORUM --> MYSQL
+    FORUM --> REDIS
+
+    %% 服务到 Nacos
+    USER -.-> NACOS
+    WORD -.-> NACOS
+    CHAT -.-> NACOS
+    WRITE -.-> NACOS
+    TRANS -.-> NACOS
+    FORUM -.-> NACOS
+    READ -.-> NACOS
+    GW -.-> NACOS
+
+    %% 服务到外部
+    CHAT --> AI
+    WRITE --> AI
+
+    %% 可观测性
+    PROM -.->|采集| GW
+    PROM -.->|采集| USER
+    PROM -.->|采集| WORD
+    GRAF --> PROM
+    GRAF --> LOKI
+
+    %% 样式
+    classDef client fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    classDef access fill:#fff3e0,stroke:#f57c00,stroke-width:3px
+    classDef gateway fill:#fce4ec,stroke:#c2185b,stroke-width:3px
+    classDef service fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef storage fill:#f3e5f5,stroke:#7b1fa2,stroke-width:3px
+    classDef registry fill:#fff9c4,stroke:#f9a825,stroke-width:2px
+    classDef observability fill:#e1f5fe,stroke:#0288d1,stroke-width:2px
+    classDef external fill:#fafafa,stroke:#616161,stroke-width:2px,stroke-dasharray: 5 5
+
+    class WEB,MOBILE client
+    class NGINX access
+    class GW gateway
+    class USER,WORD,CHAT,WRITE,TRANS,FORUM,READ service
+    class MYSQL,REDIS storage
+    class NACOS registry
+    class PROM,GRAF,LOKI observability
+    class AI external
+            </div>
+        </div>
+
+        <!-- ==================== 2. 服务内部架构 ==================== -->
+        <div class="section">
+            <h2 class="section-title">🏗️ 2. 微服务内部架构（三层架构）</h2>
+            <div class="info-box">
+                <h3>分层职责</h3>
+                <p><strong>Controller 层</strong>: 接收 HTTP 请求，参数校验，调用 Service<br/>
+                <strong>Service 层</strong>: 业务逻辑处理，事务管理，调用 Mapper<br/>
+                <strong>Mapper 层</strong>: 数据库访问，MyBatis-Plus ORM 操作</p>
+            </div>
+            <div class="mermaid">
+graph TB
+    subgraph "Controller 层 - API 入口"
+        C1[RestController<br/>@Tag @Operation]
+        C2[参数校验<br/>@Valid @RequestBody]
+        C3[统一响应<br/>Result&lt;T&gt;]
+    end
+
+    subgraph "Service 层 - 业务逻辑"
+        S1[业务接口<br/>XxxService]
+        S2[业务实现<br/>XxxServiceImpl]
+        S3[事务管理<br/>@Transactional]
+        S4[业务异常<br/>BusinessException]
+    end
+
+    subgraph "Mapper 层 - 数据访问"
+        M1[MyBatis-Plus<br/>BaseMapper&lt;T&gt;]
+        M2[自定义 SQL<br/>@Select @Update]
+        M3[分页查询<br/>PageResult&lt;T&gt;]
+    end
+
+    subgraph "实体与 DTO"
+        E1[Entity<br/>数据库实体]
+        E2[DTO<br/>数据传输对象]
+        E3[Record<br/>Java Record]
+    end
+
+    C1 --> S1
+    C2 --> C1
+    C3 --> C1
+    S1 --> S2
+    S2 --> S3
+    S2 --> S4
+    S2 --> M1
+    M1 --> M2
+    M1 --> M3
+    M1 --> E1
+    C1 --> E2
+    C2 --> E3
+
+    classDef controller fill:#fff4e6,stroke:#ff922b,stroke-width:2px
+    classDef service fill:#d3f9d8,stroke:#51cf66,stroke-width:2px
+    classDef mapper fill:#d0ebff,stroke:#339af0,stroke-width:2px
+    classDef entity fill:#f3d9fa,stroke:#cc5de8,stroke-width:2px
+
+    class C1,C2,C3 controller
+    class S1,S2,S3,S4 service
+    class M1,M2,M3 mapper
+    class E1,E2,E3 entity
+            </div>
+        </div>
+
+        <!-- ==================== 3. 用户注册登录链路 ==================== -->
+        <div class="section">
+            <h2 class="section-title">🔐 3. 调用链路：用户注册登录</h2>
+            <div class="mermaid">
+sequenceDiagram
+    participant U as 浏览器
+    participant N as Nginx:80
+    participant G as Gateway:8080
+    participant US as user-service:8081
+    participant DB as MySQL:13306
+    participant R as Redis:6379
+
+    Note over U,R: 注册流程
+    U->>N: POST /api/user/register<br/>{username, password, email}
+    N->>G: 转发请求
+    G->>US: 路由到 user-service
+    US->>US: 参数校验 @Valid
+    US->>DB: 查询用户是否存在
+    DB-->>US: 返回结果
+    US->>US: 密码加密 BCrypt
+    US->>DB: INSERT 用户记录
+    DB-->>US: 返回成功
+    US-->>G: Result.success()
+    G-->>N: 响应
+    N-->>U: 注册成功
+
+    Note over U,R: 登录流程
+    U->>N: POST /api/user/login<br/>{username, password}
+    N->>G: 转发请求
+    G->>US: 路由到 user-service
+    US->>DB: 查询用户信息
+    DB-->>US: 返回用户数据
+    US->>US: 密码验证 BCrypt
+    US->>US: 生成 JWT Token
+    US->>R: 存储 Token 缓存
+    R-->>US: OK
+    US-->>G: Result<LoginResultDTO>
+    G-->>N: 响应
+    N-->>U: 返回 Token
+
+    Note over U,R: 后续请求认证
+    U->>N: GET /api/xxx<br/>Header: Authorization: Bearer <token>
+    N->>G: 转发请求
+    G->>G: JwtAuthFilter 验证
+    G->>R: 查询 Token 有效性
+    R-->>G: Token 有效
+    G->>US: 路由到目标服务
+    US-->>G: 业务数据
+    G-->>N: 响应
+    N-->>U: 返回数据
+            </div>
+        </div>
+
+        <!-- ==================== 4. AI 对话链路 ==================== -->
+        <div class="section">
+            <h2 class="section-title">🤖 4. 调用链路：AI 对话</h2>
+            <div class="mermaid">
+sequenceDiagram
+    participant U as 浏览器
+    participant N as Nginx
+    participant G as Gateway
+    participant CS as chat-service
+    participant DB as MySQL
+    participant R as Redis
+    participant AI as DeepSeek API
+
+    U->>N: POST /api/chat/send<br/>{sessionId, message}
+    N->>G: 转发
+    G->>G: JWT 认证
+    G->>CS: 路由到 chat-service
+
+    CS->>DB: 查询会话信息
+    DB-->>CS: 会话数据
+
+    CS->>R: 获取上下文缓存
+    R-->>CS: 历史消息
+
+    CS->>CS: 构建 Prompt
+    Note over CS: 系统提示词 +<br/>历史消息 +<br/>用户输入
+
+    CS->>AI: POST /chat/completions<br/>{model, messages}
+    Note over AI: DeepSeek 处理
+    AI-->>CS: AI 回复内容
+
+    CS->>DB: 保存用户消息
+    CS->>DB: 保存 AI 回复
+    DB-->>CS: OK
+
+    CS->>R: 更新上下文缓存
+    R-->>CS: OK
+
+    CS->>CS: 语法纠正分析
+    Note over CS: 可选：调用 AI<br/>分析语法错误
+
+    CS-->>G: Result<ChatResponse>
+    G-->>N: 响应
+    N-->>U: AI 回复 + 语法建议
+            </div>
+        </div>
+
+        <!-- ==================== 5. 单词学习链路 ==================== -->
+        <div class="section">
+            <h2 class="section-title">📚 5. 调用链路：单词学习</h2>
+            <div class="mermaid">
+sequenceDiagram
+    participant U as 浏览器
+    participant N as Nginx
+    participant G as Gateway
+    participant WS as word-service
+    participant DB as MySQL
+    participant R as Redis
+
+    U->>N: POST /api/word/learn<br/>{wordId, result}
+    N->>G: 转发
+    G->>WS: 路由到 word-service
+
+    WS->>DB: 查询单词详情
+    DB-->>WS: 单词数据
+
+    WS->>WS: 记忆算法计算
+    Note over WS: 艾宾浩斯遗忘曲线<br/>计算下次复习时间
+
+    WS->>DB: 更新学习记录
+    WS->>DB: 更新记忆状态
+    DB-->>WS: OK
+
+    WS->>R: 更新学习统计缓存
+    R-->>WS: OK
+
+    WS->>WS: 判断是否掌握
+    Note over WS: 连续正确次数 >= 阈值<br/>标记为已掌握
+
+    WS-->>G: Result<LearnResult>
+    G-->>N: 响应
+    N-->>U: 学习结果 + 下次复习时间
+
+    Note over U,R: 获取今日学习任务
+    U->>N: GET /api/word/today
+    N->>G: 转发
+    G->>WS: 路由
+    WS->>R: 查询今日任务缓存
+    R-->>WS: 缓存数据
+    WS->>DB: 查询待复习单词
+    DB-->>WS: 单词列表
+    WS-->>G: Result<TodayWords>
+    G-->>N: 响应
+    N-->>U: 今日学习任务
+            </div>
+        </div>
+
+        <!-- ==================== 6. 写作批改链路 ==================== -->
+        <div class="section">
+            <h2 class="section-title">✍️ 6. 调用链路：写作批改</h2>
+            <div class="mermaid">
+sequenceDiagram
+    participant U as 浏览器
+    participant N as Nginx
+    participant G as Gateway
+    participant WRS as writing-service
+    participant DB as MySQL
+    participant AI as DeepSeek API
+
+    U->>N: POST /api/writing/submit<br/>{title, content}
+    N->>G: 转发
+    G->>WRS: 路由到 writing-service
+
+    WRS->>DB: 保存作文记录
+    DB-->>WRS: writingId
+
+    WRS->>WRS: 构建批改 Prompt
+    Note over WRS: 评分维度：<br/>语法、词汇、结构<br/>内容、逻辑
+
+    WRS->>AI: POST /chat/completions<br/>{作文批改 Prompt}
+    Note over AI: DeepSeek 分析
+    AI-->>WRS: 批改结果 JSON
+
+    WRS->>WRS: 解析批改结果
+    Note over WRS: 提取：<br/>• 总体评分<br/>• 语法错误<br/>• 改进建议<br/>• 优秀表达
+
+    WRS->>DB: 保存批改结果
+    DB-->>WRS: OK
+
+    WRS-->>G: Result<CorrectionResult>
+    G-->>N: 响应
+    N-->>U: 评分 + 详细批改 + 建议
+            </div>
+        </div>
+
+        <!-- ==================== 7. 数据流向 ==================== -->
+        <div class="section">
+            <h2 class="section-title">💾 7. 核心数据流向</h2>
+            <div class="mermaid">
+graph LR
+    subgraph "写入流程"
+        REQ[HTTP 请求] --> GW[Gateway]
+        GW --> SVC[微服务]
+        SVC --> CACHE[Redis 缓存]
+        SVC --> DB[(MySQL)]
+    end
+
+    subgraph "读取流程"
+        REQ2[HTTP 请求] --> GW2[Gateway]
+        GW2 --> SVC2[微服务]
+        SVC2 --> CACHE2{缓存命中?}
+        CACHE2 -->|命中| RET[返回数据]
+        CACHE2 -->|未命中| DB2[(MySQL)]
+        DB2 --> CACHE2
+        CACHE2 --> RET
+    end
+
+    subgraph "异步流程"
+        SVC3[微服务] -->|发布事件| MQ[RocketMQ]
+        MQ -->|消费事件| SVC4[其他服务]
+    end
+
+    style CACHE fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style CACHE2 fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style DB fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style DB2 fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+            </div>
+        </div>
+
+        <!-- ==================== 8. 技术栈详情 ==================== -->
+        <div class="section">
+            <h2 class="section-title">🛠️ 8. 技术栈详情</h2>
+            <div class="tech-stack">
+                <div class="tech-item">
+                    <strong>前端框架</strong>
+                    React 19<br/>
+                    TypeScript 6<br/>
+                    Vite 8
+                </div>
+                <div class="tech-item">
+                    <strong>UI 组件库</strong>
+                    Ant Design 6.x<br/>
+                    Ant Design Mobile
+                </div>
+                <div class="tech-item">
+                    <strong>后端框架</strong>
+                    Spring Boot 3.2.4<br/>
+                    Spring Cloud 2023.0.1.2<br/>
+                    Java 17
+                </div>
+                <div class="tech-item">
+                    <strong>ORM 框架</strong>
+                    MyBatis-Plus 3.5.5<br/>
+                    分页插件<br/>
+                    代码生成器
+                </div>
+                <div class="tech-item">
+                    <strong>注册/配置中心</strong>
+                    Nacos 2.2.3<br/>
+                    服务注册发现<br/>
+                    动态配置管理
+                </div>
+                <div class="tech-item">
+                    <strong>API 网关</strong>
+                    Spring Cloud Gateway<br/>
+                    JWT 认证<br/>
+                    路由转发
+                </div>
+                <div class="tech-item">
+                    <strong>数据库</strong>
+                    MySQL 8.0<br/>
+                    InnoDB 引擎<br/>
+                    索引优化
+                </div>
+                <div class="tech-item">
+                    <strong>缓存</strong>
+                    Redis 7.x<br/>
+                    Redisson 3.27.0<br/>
+                    分布式锁
+                </div>
+                <div class="tech-item">
+                    <strong>消息队列</strong>
+                    RocketMQ 5.1.4<br/>
+                    异步解耦<br/>
+                    削峰填谷
+                </div>
+                <div class="tech-item">
+                    <strong>认证授权</strong>
+                    JWT (jjwt 0.12.5)<br/>
+                    Token 双令牌<br/>
+                    无状态认证
+                </div>
+                <div class="tech-item">
+                    <strong>API 文档</strong>
+                    Knife4j 4.4.0<br/>
+                    OpenAPI 3<br/>
+                    在线调试
+                </div>
+                <div class="tech-item">
+                    <strong>监控</strong>
+                    Prometheus 2.51.0<br/>
+                    Grafana 10.4.2<br/>
+                    Loki 3.0.0
+                </div>
+                <div class="tech-item">
+                    <strong>AI 服务</strong>
+                    DeepSeek API<br/>
+                    AI 对话<br/>
+                    语法纠正
+                </div>
+                <div class="tech-item">
+                    <strong>容器编排</strong>
+                    Docker Compose<br/>
+                    多阶段构建<br/>
+                    一键部署
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 图例 ==================== -->
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e3f2fd; border: 2px solid #1976d2;"></div>
+                <span><strong>客户端</strong> - Web/Mobile</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fff3e0; border: 2px solid #f57c00;"></div>
+                <span><strong>接入层</strong> - Nginx</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fce4ec; border: 2px solid #c2185b;"></div>
+                <span><strong>网关层</strong> - Gateway</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e8f5e9; border: 2px solid #388e3c;"></div>
+                <span><strong>微服务</strong> - 7 个业务服务</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #f3e5f5; border: 2px solid #7b1fa2;"></div>
+                <span><strong>数据存储</strong> - MySQL & Redis</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fff9c4; border: 2px solid #f9a825;"></div>
+                <span><strong>服务治理</strong> - Nacos</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #e1f5fe; border: 2px solid #0288d1;"></div>
+                <span><strong>可观测性</strong> - 监控 & 日志</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #fafafa; border: 2px dashed #616161;"></div>
+                <span><strong>外部服务</strong> - DeepSeek AI</span>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.esm.min.mjs';
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            },
+            sequence: {
+                useMaxWidth: true,
+                diagramMarginX: 50,
+                diagramMarginY: 10,
+                actorMargin: 50,
+                width: 150,
+                height: 65,
+                boxMargin: 10
+            }
+        });
+    </script>
+</body>
+</html>

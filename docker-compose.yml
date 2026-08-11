@@ -20,6 +20,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
       - SPRING_DATA_REDIS_HOST=enstud-redis
       - SPRING_DATA_REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-enstud-app-jwt-secret-key-2024-production-must-change}
       - SERVICE_WORD=http://enstud-word-service:8082
       - SERVICE_READ=http://enstud-word-service:8082
       - SERVICE_WRITING=http://enstud-writing-service:8084
@@ -27,6 +28,8 @@ services:
       - SERVICE_FORUM=http://enstud-forum-service:8086
     ports:
       - "${USER_SERVICE_PORT:-8081}:8081"
+    volumes:
+      - ./logs/user-service:/app/logs/enstud-user-service
     networks:
       enstud-network:
         ipv4_address: 172.20.0.20
@@ -46,6 +49,8 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
     ports:
       - "${WORD_SERVICE_PORT:-8082}:8082"
+    volumes:
+      - ./logs/word-service:/app/logs/enstud-word-service
     networks:
       enstud-network:
         ipv4_address: 172.20.0.21
@@ -67,6 +72,8 @@ services:
       - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
     ports:
       - "${CHAT_SERVICE_PORT:-8083}:8083"
+    volumes:
+      - ./logs/chat-service:/app/logs/enstud-chat-service
     networks:
       enstud-network:
         ipv4_address: 172.20.0.22
@@ -88,6 +95,8 @@ services:
       - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
     ports:
       - "${WRITING_SERVICE_PORT:-8084}:8084"
+    volumes:
+      - ./logs/writing-service:/app/logs/enstud-writing-service
     networks:
       enstud-network:
         ipv4_address: 172.20.0.23
@@ -104,6 +113,8 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
     ports:
       - "${TRANSLATE_SERVICE_PORT:-8085}:8085"
+    volumes:
+      - ./logs/translate-service:/app/logs/enstud-translate-service
     networks:
       enstud-network:
         ipv4_address: 172.20.0.24
@@ -123,9 +134,32 @@ services:
       - SPRING_DATA_REDIS_PORT=6379
     ports:
       - "${FORUM_SERVICE_PORT:-8086}:8086"
+    volumes:
+      - ./logs/forum-service:/app/logs/enstud-forum-service
     networks:
       enstud-network:
         ipv4_address: 172.20.0.25
+
+  read-service:
+    build:
+      context: .
+      dockerfile: enstud-read-service/Dockerfile
+    container_name: enstud-read-service
+    restart: unless-stopped
+    environment:
+      - NACOS_SERVER_ADDR=enstud-nacos:8848
+      - SPRING_DATASOURCE_URL=jdbc:mysql://enstud-mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - SPRING_DATA_REDIS_HOST=enstud-redis
+      - SPRING_DATA_REDIS_PORT=6379
+    ports:
+      - "${READ_SERVICE_PORT:-8087}:8087"
+    volumes:
+      - ./logs/read-service:/app/logs/enstud-read-service
+    networks:
+      enstud-network:
+        ipv4_address: 172.20.0.26
 
   # ==================== API 网关 ====================
   gateway:
@@ -154,6 +188,8 @@ services:
         condition: service_healthy
       forum-service:
         condition: service_healthy
+      read-service:
+        condition: service_healthy
     networks:
       enstud-network:
         ipv4_address: 172.20.0.30
@@ -174,11 +210,80 @@ services:
       enstud-network:
         ipv4_address: 172.20.0.31
 
+  # ==================== 可观测性 ====================
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: enstud-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      enstud-network:
+        ipv4_address: 172.20.0.40
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: enstud-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./grafana/provisioning/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+      - loki
+    networks:
+      enstud-network:
+        ipv4_address: 172.20.0.41
+
+  loki:
+    image: grafana/loki:3.0.0
+    container_name: enstud-loki
+    restart: unless-stopped
+    command: -config.file=/etc/loki/loki-config.yml
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    ports:
+      - "${LOKI_PORT:-3100}:3100"
+    networks:
+      enstud-network:
+        ipv4_address: 172.20.0.42
+
+  promtail:
+    image: grafana/promtail:3.0.0
+    container_name: enstud-promtail
+    restart: unless-stopped
+    command: -config.file=/etc/promtail/promtail-config.yml
+    volumes:
+      - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      - ./logs:/logs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
+    networks:
+      enstud-network:
+        ipv4_address: 172.20.0.43
+
 # ==================== 网络和存储 ====================
 networks:
   enstud-network:
     external: true
 
 volumes:
-  es-data:
-    external: false
+  prometheus-data:
+  grafana-data:
+  loki-data:

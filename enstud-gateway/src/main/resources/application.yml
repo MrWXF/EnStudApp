@@ -54,6 +54,11 @@ spring:
           uri: lb://enstud-forum-service
           predicates:
             - Path=/forum/**,/api/forum/**
+        # 阅读服务
+        - id: read-service
+          uri: lb://enstud-read-service
+          predicates:
+            - Path=/read/**,/api/read/**
       # 全局 CORS 配置
       globalcors:
         cors-configurations:
@@ -80,3 +85,13 @@ gateway:
 logging:
   level:
     com.enstud.gateway: DEBUG
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always

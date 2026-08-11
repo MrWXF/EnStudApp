@@ -87,7 +87,7 @@ git push origin v1.3.0
 ┌─────────────────────────────────────────────────┐
 │ 1. Build — mvn package + npm build               │
 ├─────────────────────────────────────────────────┤
-│ 2. Docker — 并行构建 8 个镜像                    │
+│ 2. Docker — 并行构建 9 个镜像                    │
 │    → 推送到 ghcr.io (ghcr.io/<org>/<svc>:v1.3.0) │
 ├─────────────────────────────────────────────────┤
 │ 3. Deploy — SSH 到服务器                         │
@@ -155,6 +155,11 @@ docker compose logs -f --tail=50 gateway
 | `V1__create_chat_tables.sql` | AI 对话相关表 |
 | `V2__create_writing_table.sql` | 写作批改相关表 |
 | `V3__add_streak_fields.sql` | 连续学习天数字段 |
+| `V4__add_user_goal_tables.sql` | 用户学习目标表 |
+| `V5__add_forum_tag_tables.sql` | 论坛标签表 |
+| `V6__add_user_follow_table.sql` | 用户关注表 |
+| `V7__add_wrong_count_field.sql` | 错词本字段 |
+| `V8__add_user_follow_counts.sql` | 用户关注计数字段 |
 
 **新增迁移：**
 1. 在 `sql/migrations/` 下创建 `V4__描述.sql`
@@ -232,9 +237,9 @@ Merge to main — 额外执行：
 Git Tag v* → CD:
 │
 ├── Build All Artifacts (JAR + dist)
-├── Docker Build & Push × 8 (parallel)
+├── Docker Build & Push × 9 (parallel)
 │   user-service / word-service / chat-service / writing-service
-│   translate-service / forum-service / gateway / nginx
+│   translate-service / forum-service / read-service / gateway / nginx
 │   → ghcr.io/<org>/<svc>:<version> + :latest
 ├── Deploy to Production (SSH)
 │   ├── DB 备份 (mysqldump → backups/, 保留 7 天)

@@ -19,6 +19,7 @@ public class UserWordRecord {
     private Integer reviewInterval;
     private Integer repetitions;
     private Integer quality;
+    private Integer wrongCount;
     private Integer masteryLevel;
     private String status;
     private Integer memoryLevel;

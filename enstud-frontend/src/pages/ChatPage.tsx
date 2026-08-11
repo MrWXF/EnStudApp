@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Card, Input, Button, List, Avatar, Select, Space, message, Tag } from 'antd';
-import { SendOutlined, PlusOutlined, UserOutlined, RobotOutlined, DeleteOutlined } from '@ant-design/icons';
-import { createSession, getSessions, sendMessage, getMessages, deleteSession } from '../api';
+import { SendOutlined, PlusOutlined, UserOutlined, RobotOutlined, DeleteOutlined, ThunderboltOutlined } from '@ant-design/icons';
+import { createSession, getSessions, sendMessage, getMessages, deleteSession, startReviewSession } from '../api';
 import type { ChatSession, MessageDTO } from '../types';
 
 export default function ChatPage() {
@@ -39,6 +39,28 @@ export default function ChatPage() {
       message.success('新会话已创建');
     } catch {
       message.error('创建失败');
+    }
+  };
+
+  const handleReviewSession = async () => {
+    try {
+      setLoading(true);
+      const res = await startReviewSession();
+      if (res.data) {
+        // 复习对话创建成功后，刷新会话列表并切换到新会话
+        await loadSessions();
+        // 获取最新会话（通常是第一个）
+        const sessionsRes = await getSessions();
+        if (sessionsRes.data && sessionsRes.data.length > 0) {
+          setActiveSession(sessionsRes.data[0].id);
+          setMessages([res.data.aiMessage]);
+        }
+        message.success('复习对话已创建，AI 将围绕你正在学习的单词进行练习');
+      }
+    } catch {
+      message.error('创建复习对话失败');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -96,6 +118,9 @@ export default function ChatPage() {
               { label: '旅行', value: 'TRAVEL' },
             ]} />
           <Button type="primary" size="small" icon={<PlusOutlined />} onClick={handleNewSession} />
+          <Button size="small" icon={<ThunderboltOutlined />} onClick={handleReviewSession} title="AI 复习对话">
+            复习
+          </Button>
         </Space>
       }>
         <List size="small" dataSource={sessions} renderItem={renderItem} />

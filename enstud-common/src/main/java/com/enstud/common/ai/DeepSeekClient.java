@@ -27,7 +27,6 @@ import java.util.Map;
  * @since 1.0.0
  */
 @Slf4j
-@RequiredArgsConstructor
 public class DeepSeekClient {
 
     /** 注入 DeepSeek 配置属性 */
@@ -35,6 +34,19 @@ public class DeepSeekClient {
 
     /** Jackson JSON 序列化工具 */
     private final ObjectMapper objectMapper;
+
+    /** AI 用量追踪器（可选，为 null 时不做配额检查） */
+    private final AiUsageTracker usageTracker;
+
+    public DeepSeekClient(DeepSeekProperties properties, ObjectMapper objectMapper) {
+        this(properties, objectMapper, null);
+    }
+
+    public DeepSeekClient(DeepSeekProperties properties, ObjectMapper objectMapper, AiUsageTracker usageTracker) {
+        this.properties = properties;
+        this.objectMapper = objectMapper;
+        this.usageTracker = usageTracker;
+    }
 
     /**
      * 单轮对话：直接传入系统提示词和用户消息
@@ -53,6 +65,23 @@ public class DeepSeekClient {
     }
 
     /**
+     * 单轮对话（带配额检查）
+     *
+     * @param systemPrompt 系统提示词
+     * @param userMessage  用户消息
+     * @param userId       用户ID（用于配额检查）
+     * @param feature      功能类型（chat / writing / translate）
+     * @return AI 生成的回复文本
+     * @throws BusinessException 当配额超限或调用失败时抛出
+     */
+    public String chat(String systemPrompt, String userMessage, Long userId, String feature) {
+        checkQuota(userId, feature);
+        String result = chat(systemPrompt, userMessage);
+        recordUsage(userId, feature);
+        return result;
+    }
+
+    /**
      * 多轮对话：传入完整对话历史
      * <p>
      * 消息列表中应包含历史对话（system → user → assistant → ... → user），
@@ -63,6 +92,20 @@ public class DeepSeekClient {
      * @throws BusinessException 当 API 调用失败时抛出
      */
     public String chat(List<DeepSeekRequest.ChatMessage> messages) {
+        return chat(messages, null, null);
+    }
+
+    /**
+     * 多轮对话（带配额检查）
+     *
+     * @param messages 消息列表
+     * @param userId   用户ID（用于配额检查）
+     * @param feature  功能类型（chat / writing / translate）
+     * @return AI 生成的回复文本
+     * @throws BusinessException 当配额超限或调用失败时抛出
+     */
+    public String chat(List<DeepSeekRequest.ChatMessage> messages, Long userId, String feature) {
+        checkQuota(userId, feature);
         DeepSeekRequest request = DeepSeekRequest.create(properties.getModel(), messages);
 
         try {
@@ -98,6 +141,7 @@ public class DeepSeekClient {
                     log.warn("DeepSeek returned empty content");
                     throw new BusinessException(ErrorCode.AI_RESPONSE_EMPTY);
                 }
+                recordUsage(userId, feature);
                 return content;
             } else {
                 // API 返回错误
@@ -112,6 +156,22 @@ public class DeepSeekClient {
             // 其他异常（网络、JSON 解析等）统一包装
             log.error("DeepSeek API call failed", e);
             throw new BusinessException(ErrorCode.AI_SERVICE_ERROR, "AI 服务调用异常: " + e.getMessage());
+        }
+    }
+
+    // ==================== 配额检查 ====================
+
+    private void checkQuota(Long userId, String feature) {
+        if (usageTracker != null && userId != null && feature != null) {
+            if (!usageTracker.checkQuota(userId, feature)) {
+                throw new BusinessException(ErrorCode.AI_QUOTA_EXCEEDED);
+            }
+        }
+    }
+
+    private void recordUsage(Long userId, String feature) {
+        if (usageTracker != null && userId != null && feature != null) {
+            usageTracker.recordUsage(userId, feature);
         }
     }
 

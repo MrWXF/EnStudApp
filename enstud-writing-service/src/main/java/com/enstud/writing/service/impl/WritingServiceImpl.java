@@ -103,7 +103,7 @@ public class WritingServiceImpl implements WritingService {
         List<CorrectionItemDTO> items = result.getItems().stream()
                 .map(i -> new CorrectionItemDTO(i.getType(), i.getOriginal(), i.getSuggestion(), i.getExplanation()))
                 .toList();
-        return new CorrectionDTO(writingId, result.getScore(), result.getOverallComment(), items);
+        return new CorrectionDTO(writingId, result.getScore(), result.getOverallComment(), items, result.getLearningWordsUsed());
     }
 
     @SneakyThrows

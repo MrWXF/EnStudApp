@@ -193,11 +193,17 @@ public class WordServiceImpl implements WordService {
             record.setRepetitions(0);
             record.setMasteryLevel(0);
             record.setMemoryLevel(0);
+            record.setWrongCount(0);
             record.setStatus("LEARNING");
         }
 
         // SM-2 算法更新（内部自动更新 memoryLevel）
         Sm2Algorithm.update(record, quality);
+
+        // 答错时累加 wrong_count
+        if (quality < 3) {
+            record.setWrongCount(record.getWrongCount() + 1);
+        }
 
         if (record.getId() == null) {
             recordMapper.insert(record);

@@ -36,6 +36,12 @@ public class User {
     /** 积分 */
     private Integer points;
 
+    /** 关注数 */
+    private Integer followingCount;
+
+    /** 粉丝数 */
+    private Integer followerCount;
+
     /** 最后登录时间 */
     private LocalDateTime lastLoginAt;
 

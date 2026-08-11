@@ -1,0 +1,82 @@
+# Prometheus 配置 — EnStudApp 微服务监控
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # Prometheus 自监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # API 网关
+  - job_name: 'enstud-gateway'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['enstud-gateway:8080']
+        labels:
+          service: 'gateway'
+
+  # 用户服务
+  - job_name: 'enstud-user-service'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['enstud-user-service:8081']
+        labels:
+          service: 'user'
+
+  # 单词服务
+  - job_name: 'enstud-word-service'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['enstud-word-service:8082']
+        labels:
+          service: 'word'
+
+  # AI 对话服务
+  - job_name: 'enstud-chat-service'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['enstud-chat-service:8083']
+        labels:
+          service: 'chat'
+
+  # 写作服务
+  - job_name: 'enstud-writing-service'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['enstud-writing-service:8084']
+        labels:
+          service: 'writing'
+
+  # 翻译服务
+  - job_name: 'enstud-translate-service'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['enstud-translate-service:8085']
+        labels:
+          service: 'translate'
+
+  # 论坛服务
+  - job_name: 'enstud-forum-service'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['enstud-forum-service:8086']
+        labels:
+          service: 'forum'
+
+  # 阅读服务
+  - job_name: 'enstud-read-service'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['enstud-read-service:8087']
+        labels:
+          service: 'read'

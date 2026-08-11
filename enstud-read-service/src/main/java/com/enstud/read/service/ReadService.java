@@ -48,4 +48,9 @@ public interface ReadService {
      * 划词查词：翻译选中文本并自动加入生词本
      */
     WordLookupResponse wordLookup(Long userId, WordLookupRequest request);
+
+    /**
+     * 获取推荐文章 — 优先展示包含用户正在学习单词的文章（学习闭环）
+     */
+    List<ArticleDTO> getRecommendedArticles(Long userId, int limit);
 }

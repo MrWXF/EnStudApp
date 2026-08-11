@@ -1,7 +1,10 @@
 package com.enstud.writing.ai;
 
 import com.enstud.common.BusinessException;
+import com.enstud.common.Result;
+import com.enstud.common.SecurityContext;
 import com.enstud.common.ai.DeepSeekClient;
+import com.enstud.common.feign.WordServiceClient;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,6 +12,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 基于 DeepSeek 的写作批改客户端
@@ -38,6 +42,9 @@ public class DeepSeekWritingAiClient implements WritingAiClient {
 
     /** Jackson JSON 序列化工具 */
     private final ObjectMapper objectMapper;
+
+    /** 单词服务 Feign 客户端（获取用户学习单词） */
+    private final WordServiceClient wordServiceClient;
 
     /**
      * 批改英语作文
@@ -78,8 +85,11 @@ public class DeepSeekWritingAiClient implements WritingAiClient {
                       "suggestion": "<corrected or improved text>",
                       "explanation": "<简体中文解释>"
                     }
-                  ]
+                  ],
+                  "learningWordsUsed": ["<word1>", "<word2>"]
                 }
+
+                The "learningWordsUsed" field should list any words from the user's learning vocabulary that appear in the essay (correctly used). If none are used, return an empty array.
 
                 Scoring criteria:
                 - 90-100: Excellent, few to no errors, well-structured
@@ -92,12 +102,16 @@ public class DeepSeekWritingAiClient implements WritingAiClient {
                 Provide the overall comment in Chinese (简体中文) and explanations in Chinese.
                 """;
 
+        // 学习闭环：获取用户正在学习的单词，附加到用户提示词
+        String learningWordsContext = buildLearningWordsContext();
+
         // 用户提示词：包含待批改的作文内容
         String userPrompt = String.format("""
                 Please correct and evaluate this English essay:
 
                 Title: %s
                 Topic Type: %s
+                %s
 
                 ---
                 %s
@@ -105,11 +119,12 @@ public class DeepSeekWritingAiClient implements WritingAiClient {
                 """,
                 request.getTitle(),
                 request.getTopicType(),
+                learningWordsContext,
                 request.getContent());
 
         try {
             // 调用 DeepSeek API 获取批改结果
-            String aiReply = deepSeekClient.chat(systemPrompt, userPrompt);
+            String aiReply = deepSeekClient.chat(systemPrompt, userPrompt, SecurityContext.getCurrentUserId(), "writing");
 
             // 清理可能存在的 markdown 代码块标记（AI 有时会返回 ```json ... ```）
             String cleanJson = aiReply.trim();
@@ -151,6 +166,44 @@ public class DeepSeekWritingAiClient implements WritingAiClient {
             log.error("Failed to parse DeepSeek writing correction response", e);
             // 解析失败时返回基本反馈，避免前端崩溃
             return new WritingCorrection(60, "AI 批改服务暂时无法提供详细分析，请稍后重试。", List.of());
+        }
+    }
+
+    /**
+     * 构建学习单词上下文（学习闭环）
+     * <p>
+     * 获取用户正在学习的单词列表，附加到 AI 批改提示中，
+     * 引导 AI 关注用户是否使用了这些单词并给予鼓励。
+     */
+    private String buildLearningWordsContext() {
+        try {
+            Long userId = SecurityContext.getCurrentUserId();
+            if (userId == null) return "";
+
+            Result<List<Map<String, Object>>> result = wordServiceClient.getLearningWords(userId, 15);
+            if (result == null || result.getData() == null || result.getData().isEmpty()) {
+                return "";
+            }
+
+            List<String> words = new java.util.ArrayList<>();
+            for (Map<String, Object> m : result.getData()) {
+                Object w = m.get("word");
+                if (w != null) {
+                    String word = w.toString();
+                    if (!word.isEmpty() && !"null".equals(word)) {
+                        words.add(word);
+                    }
+                }
+            }
+
+            if (words.isEmpty()) return "";
+
+            return "The user is currently learning these English words: " + String.join(", ", words) + ". "
+                    + "Please check if any of these words appear in the essay (correctly used). "
+                    + "If so, list them in the 'learningWordsUsed' array and mention it positively in overallComment.";
+        } catch (Exception e) {
+            log.warn("Failed to fetch learning words for writing prompt", e);
+            return "";
         }
     }
 }

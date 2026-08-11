@@ -7,7 +7,10 @@ import com.enstud.read.entity.Article;
 import com.enstud.read.entity.ArticleReadRecord;
 import com.enstud.read.mapper.ArticleMapper;
 import com.enstud.read.mapper.ArticleReadRecordMapper;
+import com.enstud.read.mapper.ArticleWordMapper;
 import com.enstud.read.service.ReadService;
+import com.enstud.common.feign.WordServiceClient;
+import com.enstud.common.Result;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +31,8 @@ public class ReadServiceImpl implements ReadService {
     private final ArticleMapper articleMapper;
     private final ArticleReadRecordMapper readRecordMapper;
     private final ArticleAggregator articleAggregator;
+    private final ArticleWordMapper articleWordMapper;
+    private final WordServiceClient wordServiceClient;
     private final RestTemplate restTemplate;
 
     @Value("${enstud.services.translate-url:http://localhost:8085}")
@@ -335,5 +340,77 @@ public class ReadServiceImpl implements ReadService {
             log.warn("Translate service call failed for '{}': {}", text, e.getMessage());
         }
         return text + "（翻译服务暂不可用）";
+    }
+
+    // ==================== 学习闭环：基于学习单词推荐文章 ====================
+
+    @Override
+    public List<ArticleDTO> getRecommendedArticles(Long userId, int limit) {
+        // 1. 获取用户正在学习的单词
+        List<String> learningWords = fetchLearningWords(userId);
+
+        if (learningWords.isEmpty()) {
+            // 没有学习单词，返回热门作为推荐
+            return getHotArticles(userId, "all").stream().limit(limit).toList();
+        }
+
+        // 2. 查找包含这些单词的文章（按匹配数量降序）
+        var matchedArticleWords = articleWordMapper.findArticlesByWords(learningWords, limit);
+        Set<Long> recommendedIds = matchedArticleWords.stream()
+                .map(aw -> aw.getArticleId())
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        // 3. 如果推荐文章不够，补充热门文章
+        if (recommendedIds.size() < limit) {
+            List<Article> hotArticles = articleMapper.selectList(
+                    new LambdaQueryWrapper<Article>()
+                            .orderByDesc(Article::getScore)
+                            .last("LIMIT " + (limit - recommendedIds.size() + 10))
+            );
+            for (Article a : hotArticles) {
+                if (recommendedIds.size() >= limit) break;
+                recommendedIds.add(a.getId());
+            }
+        }
+
+        // 4. 查询文章详情并组装 DTO
+        List<Article> articles = articleMapper.selectBatchIds(recommendedIds);
+        Map<Long, Article> articleMap = articles.stream()
+                .collect(Collectors.toMap(Article::getId, a -> a));
+
+        // 查询收藏状态
+        Set<Long> bookmarkedIds = getBookmarkedIds(userId, recommendedIds);
+
+        // 保持推荐顺序
+        return recommendedIds.stream()
+                .map(articleMap::get)
+                .filter(Objects::nonNull)
+                .limit(limit)
+                .map(a -> toDTO(a, bookmarkedIds.contains(a.getId())))
+                .toList();
+    }
+
+    private Set<Long> getBookmarkedIds(Long userId, Set<Long> articleIds) {
+        if (userId == null || articleIds.isEmpty()) return Set.of();
+        return readRecordMapper.selectList(
+                new LambdaQueryWrapper<ArticleReadRecord>()
+                        .eq(ArticleReadRecord::getUserId, userId)
+                        .in(ArticleReadRecord::getArticleId, articleIds)
+        ).stream().map(ArticleReadRecord::getArticleId).collect(Collectors.toSet());
+    }
+
+    private List<String> fetchLearningWords(Long userId) {
+        try {
+            Result<List<Map<String, Object>>> result = wordServiceClient.getLearningWords(userId, 20);
+            if (result != null && result.getData() != null) {
+                return result.getData().stream()
+                        .map(m -> String.valueOf(m.get("word")).toLowerCase())
+                        .filter(w -> w != null && !w.isEmpty() && !"null".equals(w))
+                        .toList();
+            }
+        } catch (Exception e) {
+            log.warn("Failed to fetch learning words for recommendation", e);
+        }
+        return List.of();
     }
 }

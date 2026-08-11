@@ -1,0 +1,58 @@
+# EnStudApp — 基础设施编排
+# 用法：docker compose -f docker-compose.infra.yml up -d
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: enstud-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: enstud_app
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    ports:
+      - "${MYSQL_PORT:-13306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./sql/init:/docker-entrypoint-initdb.d:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      enstud-network:
+        ipv4_address: 172.20.0.2
+
+  redis:
+    image: redis:7-alpine
+    container_name: enstud-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      enstud-network:
+        ipv4_address: 172.20.0.3
+
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: enstud-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+      JVM_XMN: 128m
+    ports:
+      - "${NACOS_PORT:-8848}:8848"
+      - "${NACOS_GRPC_PORT:-9848}:9848"
+    networks:
+      enstud-network:
+        ipv4_address: 172.20.0.4
+
+networks:
+  enstud-network:
+    external: true
+
+volumes:
+  mysql-data:
+  redis-data:

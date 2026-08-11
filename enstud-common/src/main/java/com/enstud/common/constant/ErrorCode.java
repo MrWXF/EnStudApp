@@ -44,6 +44,7 @@ public enum ErrorCode {
     // ===== 5xxx — AI通用 =====
     AI_RESPONSE_EMPTY(5001, "AI 返回内容为空，请稍后重试"),
     AI_SERVICE_ERROR(5002, "AI 服务调用异常，请稍后重试"),
+    AI_QUOTA_EXCEEDED(5003, "今日 AI 调用次数已达上限，请明天再试"),
 
     // ===== 6xxx — 论坛模块 =====
     POST_NOT_FOUND(6001, "帖子不存在"),

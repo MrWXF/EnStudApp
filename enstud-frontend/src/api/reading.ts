@@ -27,3 +27,9 @@ export const syncArticles = () =>
  */
 export const wordLookup = (params: { selectedText: string; articleId: number; contextSentence?: string }) =>
   post<WordLookupResponse>('/read/word-lookup', params);
+
+/**
+ * 获取推荐文章 — 优先展示包含用户正在学习单词的文章（学习闭环）
+ */
+export const getRecommendedArticles = (limit = 10) =>
+  get<ArticleDTO[]>(`/read/recommended?limit=${limit}`);

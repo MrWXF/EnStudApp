@@ -360,26 +360,13 @@ function login(params: any) { ... }
 ### 3.2 目录约定
 
 ```
-client/src/
-├── apis/              # API 请求（按模块拆分文件）
-│   ├── user.ts        # 用户相关 API
-│   ├── word.ts        # 单词相关 API
-│   └── ...
-├── pages/             # 页面组件（按业务模块拆分目录）
-│   ├── home/
-│   │   └── index.tsx
-│   ├── word/
-│   │   ├── index.tsx
-│   │   └── components/
-│   └── ...
-├── components/        # 全局通用组件
-├── hooks/             # 自定义 Hooks
-├── stores/            # Zustand 状态管理
-├── types/             # 全局 TypeScript 类型定义
-├── utils/             # 工具函数
-├── config/            # 配置常量
-├── styles/            # 全局样式/变量
-└── assets/            # 静态资源
+enstud-frontend/src/
+├── api/                 # API 请求（按模块拆分：user.ts, word.ts, chat.ts, forum.ts, reading.ts 等）
+├── pages/               # 页面组件（单文件形式：HomePage.tsx, WordPage.tsx, ChatPage.tsx 等）
+├── components/          # 全局通用组件（MainLayout 等）
+├── types/               # 全局 TypeScript 类型定义
+├── utils/               # 工具函数
+└── assets/              # 静态资源
 ```
 
 ### 3.3 组件规范
@@ -407,20 +394,28 @@ const WordCard: React.FC<WordCardProps> = ({ word, phonetic, definition, onFlip 
 ### 3.4 API 请求规范
 
 ```typescript
-// ✅ 正确：统一封装 API 请求
-// apis/user.ts
-import request from '@/utils/request';
+// ✅ 正确：统一封装在 api/ 目录
+// api/client.ts — 底层 HTTP 客户端（封装 get/post）
+// api/auth.ts — 认证相关 API
+import { post } from './client';
+import type { LoginRequest, LoginResult } from '../types';
 
-export function login(params: LoginParams) {
-  return request.post<LoginResult>('/user/login', params);
-}
+export const login = (data: LoginRequest) =>
+  post<LoginResult>('/user/login', data);
 
-// ✅ 正确：在页面中使用
-import { login } from '@/apis/user';
+// api/index.ts — 统一导出
+export * from './auth';
+export * from './word';
+export * from './chat';
+// ...
 
-const handleLogin = async () => {
-  const res = await login({ username, password });
+// ✅ 正确：在页面中导入
+import { login } from '../api';
+
+const handleLogin = async (values: LoginRequest) => {
+  const res = await login(values);
   if (res.code === 0) {
+    localStorage.setItem('token', res.data.accessToken);
     // 处理登录成功
   }
 };
@@ -428,29 +423,23 @@ const handleLogin = async () => {
 
 ### 3.5 状态管理
 
-**使用 Zustand 进行状态管理：**
+**项目未引入 Zustand / Redux 等第三方状态库，采用页面级 `useState` + `localStorage` 的轻量模式：**
 
 ```typescript
-// ✅ 正确
-import { create } from 'zustand';
+// ✅ 正确：页面内部状态用 useState
+const [loading, setLoading] = useState(false);
+const [list, setList] = useState<Item[]>([]);
 
-interface UserStore {
-  userInfo: UserInfo | null;
-  token: string | null;
-  setUserInfo: (info: UserInfo) => void;
-  logout: () => void;
-}
+// ✅ 正确：跨页面共享的用户信息直接存 localStorage
+localStorage.setItem('token', res.data.accessToken);
+localStorage.setItem('user', JSON.stringify({ userId, username, nickname }));
 
-export const useUserStore = create<UserStore>((set) => ({
-  userInfo: null,
-  token: localStorage.getItem('token'),
-  setUserInfo: (info) => set({ userInfo: info }),
-  logout: () => {
-    set({ userInfo: null, token: null });
-    localStorage.removeItem('token');
-  },
-}));
+// ✅ 正确：读取当前用户
+const currentUser = JSON.parse(localStorage.getItem('user') || 'null');
+const token = localStorage.getItem('token');
 ```
+
+> 仅在确实需要跨多组件共享复杂状态时，才考虑引入 Context（当前项目暂无此类场景）。
 
 ### 3.6 命名规范
 

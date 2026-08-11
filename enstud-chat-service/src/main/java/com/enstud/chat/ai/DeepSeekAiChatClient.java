@@ -1,8 +1,11 @@
 package com.enstud.chat.ai;
 
 import com.enstud.common.BusinessException;
+import com.enstud.common.Result;
+import com.enstud.common.SecurityContext;
 import com.enstud.common.ai.DeepSeekClient;
 import com.enstud.common.constant.ErrorCode;
+import com.enstud.common.feign.WordServiceClient;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -13,6 +16,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * 基于 DeepSeek 的真实 AI 对话客户端
@@ -41,6 +45,9 @@ public class DeepSeekAiChatClient implements AiChatClient {
     /** Jackson JSON 序列化工具 */
     private final ObjectMapper objectMapper;
 
+    /** 单词服务 Feign 客户端（获取用户学习单词） */
+    private final WordServiceClient wordServiceClient;
+
     /**
      * 处理用户对话请求，调用 DeepSeek API 获取 AI 回复
      * <p>
@@ -65,6 +72,12 @@ public class DeepSeekAiChatClient implements AiChatClient {
         // 根据场景构建系统提示词，引导 AI 行为
         String systemPrompt = buildSystemPrompt(request.getScenario());
 
+        // 学习闭环：获取用户正在学习的单词，注入到提示词中
+        String learningWordsHint = buildLearningWordsHint();
+        if (!learningWordsHint.isEmpty()) {
+            systemPrompt = systemPrompt + "\n\n" + learningWordsHint;
+        }
+
         // 将数据库实体转换为 AI 请求格式（role + content）
         List<Map.Entry<String, String>> history = new ArrayList<>();
         if (request.getHistory() != null) {
@@ -80,7 +93,7 @@ public class DeepSeekAiChatClient implements AiChatClient {
             List<com.enstud.common.ai.DeepSeekRequest.ChatMessage> messages =
                     DeepSeekClient.buildMessages(systemPrompt, history, request.getCurrentMessage());
 
-            String aiReply = deepSeekClient.chat(messages);
+            String aiReply = deepSeekClient.chat(messages, SecurityContext.getCurrentUserId(), "chat");
 
             // AI 可能按约定在回复末尾附加 [GRAMMAR_ISSUES]...[/GRAMMAR_ISSUES] 标记
             List<AiResponse.GrammarIssue> issues = extractGrammarIssues(aiReply);
@@ -96,6 +109,40 @@ public class DeepSeekAiChatClient implements AiChatClient {
             // 其他异常（网络、JSON 解析等）包装为业务异常
             log.error("DeepSeek chat error", e);
             throw new BusinessException(ErrorCode.AI_SERVICE_ERROR);
+        }
+    }
+
+    /**
+     * 构建学习单词提示词（学习闭环）
+     * <p>
+     * 通过 Feign 获取用户正在学习的单词列表，
+     * 引导 AI 在对话中自然使用这些单词，帮助用户在语境中加深记忆。
+     *
+     * @return 学习单词提示词，如果获取失败或无学习单词则返回空字符串
+     */
+    private String buildLearningWordsHint() {
+        try {
+            Long userId = SecurityContext.getCurrentUserId();
+            if (userId == null) {
+                return "";
+            }
+            Result<List<Map<String, Object>>> result = wordServiceClient.getLearningWords(userId, 10);
+            if (result == null || result.getData() == null || result.getData().isEmpty()) {
+                return "";
+            }
+            List<String> words = result.getData().stream()
+                    .map(m -> String.valueOf(m.get("word")))
+                    .filter(w -> w != null && !w.isEmpty() && !"null".equals(w))
+                    .collect(Collectors.toList());
+            if (words.isEmpty()) {
+                return "";
+            }
+            return "【学习闭环】该用户正在学习以下英语单词，请在对话中自然地使用这些单词（每次至少用3个），帮助用户在语境中加深记忆："
+                    + String.join(", ", words)
+                    + "。不要刻意强调，让对话自然流畅。";
+        } catch (Exception e) {
+            log.warn("Failed to fetch learning words for chat prompt", e);
+            return "";
         }
     }
 

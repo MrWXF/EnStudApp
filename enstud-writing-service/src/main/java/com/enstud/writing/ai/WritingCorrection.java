@@ -29,6 +29,9 @@ public class WritingCorrection {
     /** 逐条批改意见列表，可为空但不可为 {@code null} */
     private List<CorrectionItem> items;
 
+    /** 用户使用了哪些正在学习的单词（学习闭环），AI 检测后填入 */
+    private List<String> learningWordsUsed;
+
     /**
      * 无参构造函数
      * <p>
@@ -66,4 +69,10 @@ public class WritingCorrection {
 
     /** @param items 批改意见列表 */
     public void setItems(List<CorrectionItem> items) { this.items = items; }
+
+    /** @return 使用了哪些正在学习的单词 */
+    public List<String> getLearningWordsUsed() { return learningWordsUsed; }
+
+    /** @param learningWordsUsed 使用了哪些正在学习的单词 */
+    public void setLearningWordsUsed(List<String> learningWordsUsed) { this.learningWordsUsed = learningWordsUsed; }
 }

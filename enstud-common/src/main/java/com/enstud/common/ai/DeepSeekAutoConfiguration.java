@@ -1,6 +1,8 @@
 package com.enstud.common.ai;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.redisson.api.RedissonClient;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,16 +26,21 @@ public class DeepSeekAutoConfiguration {
 
     /**
      * 注册 DeepSeek 客户端 Bean
-     * <p>
-     * 原始 {@code @Component} 注解在非同包微服务中无法被扫描到，
-     * 此处通过 {@code @Bean} 显式注册，确保跨服务可用。
-     *
-     * @param properties  DeepSeek 配置属性（由 {@code @EnableConfigurationProperties} 自动注册）
-     * @param objectMapper Jackson JSON 序列化工具（Spring Boot 自动提供）
-     * @return DeepSeek 客户端实例
      */
     @Bean
-    public DeepSeekClient deepSeekClient(DeepSeekProperties properties, ObjectMapper objectMapper) {
-        return new DeepSeekClient(properties, objectMapper);
+    public DeepSeekClient deepSeekClient(DeepSeekProperties properties, ObjectMapper objectMapper,
+                                          org.springframework.beans.factory.ObjectProvider<AiUsageTracker> trackerProvider) {
+        return new DeepSeekClient(properties, objectMapper, trackerProvider.getIfAvailable());
+    }
+
+    /**
+     * 注册 AI 用量追踪器 Bean
+     * <p>
+     * 仅在 RedissonClient 存在时生效（即服务配置了 Redis）。
+     */
+    @Bean
+    @ConditionalOnBean(RedissonClient.class)
+    public AiUsageTracker aiUsageTracker(RedissonClient redissonClient, DeepSeekProperties properties) {
+        return new AiUsageTracker(redissonClient, properties);
     }
 }

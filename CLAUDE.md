@@ -7,7 +7,7 @@
 EnStudApp 是一款基于 Spring Cloud 微服务架构的免费英语学习应用，采用前后端分离架构。
 后端 7 个微服务 + API 网关，前端 React + TypeScript + Ant Design Mobile。
 
-**功能模块：** 单词学习、AI英语日常聊天、英语写作批改、英语翻译、论坛交流
+**功能模块：** 单词学习、AI英语日常聊天、英语写作批改、英语翻译、英语阅读、论坛交流
 
 **技术栈：**
 
@@ -23,8 +23,8 @@ EnStudApp 是一款基于 Spring Cloud 微服务架构的免费英语学习应�
 | 消息队列 | RocketMQ | 5.1.4 |
 | API 文档 | Knife4j (OpenAPI 3) | 4.4.0 |
 | 认证 | JWT (jjwt) | 0.12.5 |
-| 前端框架 | React + TypeScript | Vite 构建 |
-| UI 组件库 | Ant Design Mobile | — |
+| 前端框架 | React + TypeScript | Vite 8 / React 19 / TS 6 |
+| UI 组件库 | Ant Design (antd) | 6.x |
 | 容器编排 | Docker Compose | — |
 | CI/CD | GitHub Actions | — |
 
@@ -36,10 +36,15 @@ EnStudApp 是一款基于 Spring Cloud 微服务架构的免费英语学习应�
 EnStudApp/
 ├── CLAUDE.md                          # AI Coding Agent 项目指令
 ├── README.md                          # 项目说明
+├── 产品设计文档.md                     # 产品设计文档
 ├── pom.xml                            # Maven 父工程（统一版本管理）
-├── docker-compose.yml                 # 容器编排
+├── docker-compose.yml                 # 容器编排（开发环境）
+├── docker-compose.prod.yml            # 容器编排（生产环境覆盖配置）
 ├── .env.example                       # 环境变量模板
 ├── .gitignore                         # Git 忽略规则
+├── build-frontend.bat                 # Windows 前端构建脚本
+├── deploy-frontend.sh                 # Linux 前端部署脚本
+├── run-migrations.sh                  # 数据库迁移脚本
 │
 ├── enstud-common/                     # 公共模块（实体、DTO、工具、Feign 客户端）
 │   └── src/main/java/com/enstud/common/
@@ -62,59 +67,67 @@ EnStudApp/
 ├── enstud-gateway/                    # API 网关（Spring Cloud Gateway）
 │   └── filter/JwtAuthFilter.java      # JWT 认证过滤器
 │
-├── enstud-user-service/               # 用户服务（注册、登录、个人信息、积分等级）
-├── enstud-word-service/               # 单词服务（词库、学习记录、记忆算法）
-├── enstud-chat-service/               # AI对话服务（聊天、语法纠正、对话历史）
+├── enstud-user-service/               # 用户服务（注册、登录、个人信息、积分等级、学习目标、关注）
+├── enstud-word-service/               # 单词服务（词库、学习记录、记忆算法、错词本）
+├── enstud-chat-service/               # AI对话服务（聊天、语法纠正、对话历史、话题推荐）
 ├── enstud-writing-service/            # 写作服务（作文提交、智能批改、范文）
 ├── enstud-translate-service/          # 翻译服务（文本/语音/图片翻译）
-├── enstud-forum-service/              # 论坛服务（帖子、回复、点赞、搜索）
+├── enstud-forum-service/              # 论坛服务（帖子、回复、点赞、搜索、标签）
+├── enstud-read-service/               # 阅读服务（英文文章、阅读查词联动）
 │
-├── client/                            # 前端（Vite + React + TypeScript）
+├── enstud-frontend/                   # 前端（Vite + React + TypeScript + Ant Design）
 │   └── src/
-│       ├── apis/                      # API 请求封装（按模块拆分）
-│       ├── pages/                     # 页面组件
-│       │   ├── home/                  # 首页（学习仪表盘）
-│       │   ├── word/                  # 单词学习页
-│       │   ├── chat/                  # AI对话页
-│       │   ├── writing/               # 写作练习页
-│       │   ├── translate/             # 翻译页
-│       │   ├── forum/                 # 论坛页
-│       │   ├── user/                  # 个人中心
-│       │   └── login/                 # 登录注册
-│       ├── components/                # 通用组件
-│       ├── layouts/                   # 布局组件
-│       ├── hooks/                     # 自定义 Hooks
-│       ├── stores/                    # 状态管理（Zustand）
-│       ├── styles/                    # 全局样式
+│       ├── api/                       # API 请求封装（按模块拆分：user/word/chat/forum/reading 等）
+│       ├── pages/                     # 页面组件（HomePage, WordPage, ChatPage, WritingPage, TranslatePage, ReadPage, ForumPage, DashboardPage 等）
+│       ├── components/                # 通用组件（MainLayout 等）
 │       ├── types/                     # TypeScript 类型定义
 │       ├── utils/                     # 工具函数
-│       ├── config/                    # 配置（API 地址等）
 │       └── assets/                    # 静态资源
 │
+├── client/                            # 前端旧目录（已废弃，新代码请使用 enstud-frontend）
+│
 ├── nginx/                             # Nginx 配置（反向代理 + 前端静态资源）
-│   ├── nginx.conf
+│   ├── nginx.conf                     # 开发环境配置
+│   ├── nginx.prod.conf                # 生产环境配置
 │   └── Dockerfile
 │
-├── sql/                               # 数据库迁移脚本
+├── sql/                               # 数据库脚本
+│   ├── init/                          # 初始化 SQL（首次建表）
+│   ├── migrations/                    # 增量迁移脚本（V1__xxx.sql 命名）
+│   ├── v1.1.0-memory-level.sql        # 版本升级脚本
+│   └── v1.2.0-read-articles.sql
+│
+├── scripts/                           # 运维脚本
+│   ├── deploy.sh                      # 生产部署脚本
+│   ├── release.sh                     # 发布脚本
+│   ├── rollback.sh                    # 回滚脚本
+│   ├── health-check.sh                # 健康检查
+│   ├── seed_words.py / seed_words.sql # 词库种子数据
+│   ├── e2e_test.sh / e2e_*.sh         # E2E 测试脚本
+│   └── e2e_test_py.py                 # Python E2E 测试
+│
 ├── docs/                              # 详细文档
 │   ├── guides/                        # 开发指南
 │   │   ├── coding-standards.md        # 编码规范
 │   │   ├── environment-setup.md       # 环境配置
 │   │   ├── api-verification.md        # API 验证规范
 │   │   ├── git-workflow.md            # Git 工作流
-│   │   └── frontend-guide.md          # 前端开发指南
+│   │   ├── frontend-guide.md          # 前端开发指南
+│   │   └── ai-one-person-company.md   # AI 一人公司开发指南
 │   ├── design-docs/                   # 设计文档
 │   │   ├── database-schema.sql        # 完整数据库 Schema
 │   │   ├── api-design.md              # API 设计文档
-│   │   └── database-changelog.md      # 数据库变更记录
+│   │   ├── database-changelog.md      # 数据库变更记录
+│   │   └── feature-enhancements-v2.md # 功能增强设计（v2）
 │   └── deployment/                    # 部署相关
+│       ├── RELEASE.md                 # 发布说明
 │       ├── cicd.md                    # CI/CD 流程
 │       ├── deployment.md              # 部署指南
 │       └── nginx.md                   # Nginx 配置说明
 │
-├── nacos-config/                      # Nacos 配置文件（导入用）
-├── logs/                              # 日志输出目录
-└── scripts/                           # 运维脚本
+├── nacos-config/                      # Nacos 配置文件（导入用，目前为空）
+├── e2e/                               # E2E 测试输出目录（gitignore）
+├── logs/                              # 日志输出目录（gitignore）
 ```
 
 ---
@@ -136,6 +149,7 @@ EnStudApp/
 | writing-service | 8084 | 写作服务 |
 | translate-service | 8085 | 翻译服务 |
 | forum-service | 8086 | 论坛服务 |
+| read-service | 8087 | 阅读服务 |
 | Nacos | 8848 | 注册/配置中心 |
 | MySQL | 13306 | 数据库（Docker） |
 | Redis | 6379 | 缓存 |
@@ -161,7 +175,7 @@ docker-compose up -d mysql redis nacos
 cd enstud-user-service && mvn spring-boot:run
 
 # 3. 启动前端
-cd client && npm install && npm run dev
+cd enstud-frontend && npm install && npm run dev
 ```
 
 ### 启动（Docker 一键）
@@ -174,11 +188,22 @@ docker-compose logs -f <service>  # 查看日志
 docker-compose down     # 停止所有
 ```
 
+### 生产部署
+
+```bash
+# 使用 prod 覆盖配置（拉取预构建镜像，不本地构建）
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+
+# 或使用发布脚本
+./scripts/release.sh
+./scripts/deploy.sh
+```
+
 ### 测试
 
 ```bash
 mvn test                # 后端单元测试
-cd client && npm run lint  # 前端 lint
+cd enstud-frontend && npm run lint  # 前端 lint
 ```
 
 ---
@@ -248,9 +273,12 @@ Mapper (数据访问)
 | API 验证 | [docs/guides/api-verification.md](docs/guides/api-verification.md) |
 | Git 工作流 | [docs/guides/git-workflow.md](docs/guides/git-workflow.md) |
 | 前端开发 | [docs/guides/frontend-guide.md](docs/guides/frontend-guide.md) |
+| AI 一人公司开发 | [docs/guides/ai-one-person-company.md](docs/guides/ai-one-person-company.md) |
 | 完整数据库 Schema | [docs/design-docs/database-schema.sql](docs/design-docs/database-schema.sql) |
 | API 设计文档 | [docs/design-docs/api-design.md](docs/design-docs/api-design.md) |
 | 数据库变更记录 | [docs/design-docs/database-changelog.md](docs/design-docs/database-changelog.md) |
+| 功能增强设计（v2） | [docs/design-docs/feature-enhancements-v2.md](docs/design-docs/feature-enhancements-v2.md) |
+| 发布说明 | [docs/deployment/RELEASE.md](docs/deployment/RELEASE.md) |
 | CI/CD 流程 | [docs/deployment/cicd.md](docs/deployment/cicd.md) |
 | 部署指南 | [docs/deployment/deployment.md](docs/deployment/deployment.md) |
 | Nginx 配置 | [docs/deployment/nginx.md](docs/deployment/nginx.md) |
