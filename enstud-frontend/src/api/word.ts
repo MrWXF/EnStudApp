@@ -12,3 +12,13 @@ export const startStudy = (wordbookId: number, limit = 10) =>
 
 export const submitReview = (wordId: number, quality: number) =>
   post<null>('/word/review', null, { params: { wordId, quality } });
+
+/** 获取用户正在学习的单词列表（用于阅读高亮、Chat 融入提示等） */
+export interface LearningWordDTO {
+  word: string;
+  definitionCn?: string;
+  masteryLevel?: number;
+}
+
+export const getLearningWords = (limit = 50) =>
+  get<LearningWordDTO[]>('/word/learning-words', { limit });

@@ -10,9 +10,11 @@ import {
 } from '@ant-design/icons';
 import {
   getHotArticles, getSources, getBookmarks,
-  toggleBookmark, syncArticles,
+  toggleBookmark, syncArticles, getRecommendedArticles,
 } from '../api';
+import { getLearningWords } from '../api/word';
 import type { ArticleDTO, SourceDTO } from '../types';
+import type { LearningWordDTO } from '../api/word';
 
 const { Text, Title } = Typography;
 
@@ -31,6 +33,8 @@ export default function ReadPage() {
   const [syncing, setSyncing] = useState(false);
   const [activeSource, setActiveSource] = useState('all');
   const [activeTab, setActiveTab] = useState<string>('hot');
+  const [learningWords, setLearningWords] = useState<LearningWordDTO[]>([]);
+  const [recommendedIds, setRecommendedIds] = useState<Set<number>>(new Set());
 
   const loadSources = async () => {
     try {
@@ -62,6 +66,12 @@ export default function ReadPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     loadSources();
     loadArticles('all');
+    // 加载学习单词和推荐文章（用于标签显示）
+    getLearningWords(50).then((res) => setLearningWords(res.data || [])).catch(() => {});
+    getRecommendedArticles(20).then((res) => {
+      const ids = new Set((res.data || []).map((a) => a.id));
+      setRecommendedIds(ids);
+    }).catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -100,6 +110,15 @@ export default function ReadPage() {
     } finally {
       setSyncing(false);
     }
+  };
+
+  /** 计算文章中包含的学习单词数 */
+  const countMatchedWords = (article: ArticleDTO): number => {
+    if (learningWords.length === 0) return 0;
+    const text = `${article.title} ${article.summary || ''}`.toLowerCase();
+    return learningWords.filter((w) =>
+      text.includes(w.word.toLowerCase()),
+    ).length;
   };
 
   const formatTime = (time: string | null | undefined) => {
@@ -220,17 +239,20 @@ export default function ReadPage() {
                             {article.summary}
                           </Text>
                         )}
-                        <Row justify="space-between" align="middle">
-                          <Col>
-                            <Space size={12}>
-                              <Text type="secondary" style={{ fontSize: 12 }}>
-                                <FireOutlined /> {(article.score || 0).toLocaleString()}
-                              </Text>
-                              <Text type="secondary" style={{ fontSize: 12 }}>
-                                <ClockCircleOutlined /> {formatTime(article.publishedAt)}
-                              </Text>
-                            </Space>
-                          </Col>
+                        {recommendedIds.has(article.id) && countMatchedWords(article) > 0 && (
+                          <div style={{ marginTop: 8 }}>
+                            <Tag color="blue" style={{ fontSize: 11 }}>📖 {countMatchedWords(article)} 个学习词</Tag>
+                          </div>
+                        )}
+                        <Row style={{ marginTop: 4 }}>
+                          <Space size={12}>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              <FireOutlined /> {(article.score || 0).toLocaleString()}
+                            </Text>
+                            <Text type="secondary" style={{ fontSize: 12 }}>
+                              <ClockCircleOutlined /> {formatTime(article.publishedAt)}
+                            </Text>
+                          </Space>
                         </Row>
                       </div>
                     }

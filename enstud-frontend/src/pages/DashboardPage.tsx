@@ -116,6 +116,71 @@ export default function DashboardPage() {
         </Col>
       </Row>
 
+      {/* 学习闭环进度 */}
+      <Card style={{ marginTop: 24 }} styles={{ body: { padding: '20px 24px' } }}>
+        <Title level={5} style={{ marginBottom: 16 }}>
+          <ThunderboltOutlined /> 学习闭环
+        </Title>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
+          {/* 阅读 */}
+          <div
+            onClick={() => navigate('/read')}
+            style={{ textAlign: 'center', cursor: 'pointer', padding: '8px 16px', borderRadius: 8, transition: 'background 0.2s' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#f0f5ff')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <div style={{ fontSize: 28 }}>📖</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>阅读文章</div>
+            <div style={{ color: '#1677ff', fontSize: 20, fontWeight: 700 }}>{stats.totalReadArticles}</div>
+            <div style={{ color: '#8c8c8c', fontSize: 11 }}>篇</div>
+          </div>
+          <div style={{ fontSize: 20, color: '#d9d9d9' }}>→</div>
+          {/* 积累 */}
+          <div
+            onClick={() => navigate('/word')}
+            style={{ textAlign: 'center', cursor: 'pointer', padding: '8px 16px', borderRadius: 8, transition: 'background 0.2s' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#f6ffed')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <div style={{ fontSize: 28 }}>📚</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>积累单词</div>
+            <div style={{ color: '#52c41a', fontSize: 20, fontWeight: 700 }}>{stats.totalLearnedWords}</div>
+            <div style={{ color: '#8c8c8c', fontSize: 11 }}>词</div>
+          </div>
+          <div style={{ fontSize: 20, color: '#d9d9d9' }}>→</div>
+          {/* 复习 */}
+          <div
+            onClick={() => navigate('/word')}
+            style={{ textAlign: 'center', cursor: 'pointer', padding: '8px 16px', borderRadius: 8, transition: 'background 0.2s' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#fff7e6')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <div style={{ fontSize: 28 }}>🧠</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>复习巩固</div>
+            <div style={{ color: '#faad14', fontSize: 20, fontWeight: 700 }}>
+              {Object.entries(dist).reduce((sum, [key, val]: [string, number]) => {
+                const cfg = LEVEL_CONFIG.find((c) => c.key === key);
+                return cfg && ['notLearned', 'fuzzy', 'familiar'].includes(cfg.key) ? sum + val : sum;
+              }, 0)}
+            </div>
+            <div style={{ color: '#8c8c8c', fontSize: 11 }}>待复习</div>
+          </div>
+          <div style={{ fontSize: 20, color: '#d9d9d9' }}>→</div>
+          {/* 对话 */}
+          <div
+            onClick={() => navigate('/chat')}
+            style={{ textAlign: 'center', cursor: 'pointer', padding: '8px 16px', borderRadius: 8, transition: 'background 0.2s' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = '#f9f0ff')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            <div style={{ fontSize: 28 }}>💬</div>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>对话运用</div>
+            <div style={{ color: '#722ed1', fontSize: 20, fontWeight: 700 }}>{stats.totalChats}</div>
+            <div style={{ color: '#8c8c8c', fontSize: 11 }}>次</div>
+          </div>
+        </div>
+      </Card>
+
       {/* AI 每日用量 + 学习闭环快捷入口 */}
       <Row gutter={[16, 16]} style={{ marginTop: 24 }}>
         {/* AI 用量进度条 */}

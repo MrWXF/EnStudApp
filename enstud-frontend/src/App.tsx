@@ -4,6 +4,7 @@ import zhCN from 'antd/locale/zh_CN';
 import MainLayout from './components/MainLayout';
 import LoginPage from './pages/LoginPage';
 import HomePage from './pages/HomePage';
+import DashboardPage from './pages/DashboardPage';
 import WordPage from './pages/WordPage';
 import ChatPage from './pages/ChatPage';
 import WritingPage from './pages/WritingPage';
@@ -13,11 +14,13 @@ import ForumDetailPage from './pages/ForumDetailPage';
 import CreatePostPage from './pages/CreatePostPage';
 import ReadPage from './pages/ReadPage';
 import ReadDetailPage from './pages/ReadDetailPage';
-import DashboardPage from './pages/DashboardPage';
+import { useAuthStore } from './stores';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const token = localStorage.getItem('token');
-  return token ? <>{children}</> : <Navigate to="/login" />;
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  // 兼容：store 无数据时回退检查 localStorage
+  const hasToken = isAuthenticated || !!localStorage.getItem('token');
+  return hasToken ? <>{children}</> : <Navigate to="/login" />;
 }
 
 export default function App() {

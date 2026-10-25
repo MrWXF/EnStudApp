@@ -1,21 +1,100 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   Card, Typography, Button, Tag, Space, Divider, message,
-  Row, Col, Segmented, Skeleton, Spin,
+  Row, Col, Segmented, Skeleton, Spin, Tooltip,
 } from 'antd';
 import {
   ArrowLeftOutlined, StarOutlined, StarFilled,
   TranslationOutlined, LinkOutlined, FireOutlined,
   UserOutlined, ClockCircleOutlined, SendOutlined, BookOutlined,
+  BulbOutlined,
 } from '@ant-design/icons';
 import {
   getArticleDetail, getArticleTranslation,
   toggleBookmark, wordLookup,
 } from '../api';
+import { getLearningWords } from '../api/word';
 import type { ArticleDetailDTO, WordLookupResponse } from '../types';
+import type { LearningWordDTO } from '../api/word';
 
 const { Title, Paragraph, Text } = Typography;
+
+/** 将文本中的学习单词高亮渲染 */
+function HighlightedContent({
+  text,
+  learningWords,
+}: {
+  text: string;
+  learningWords: LearningWordDTO[];
+}) {
+  if (!learningWords.length || !text) {
+    return <>{text}</>;
+  }
+
+  // 构建正则：匹配所有学习单词（不区分大小写，整词匹配）
+  const words = learningWords.map((w) => w.word).filter(Boolean);
+  if (words.length === 0) return <>{text}</>;
+
+  const escaped = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const regex = new RegExp(`\\b(${escaped.join('|')})\\b`, 'gi');
+
+  const wordMap = new Map(
+    learningWords.map((w) => [w.word.toLowerCase(), w]),
+  );
+
+  const parts: Array<{ text: string; isMatch: boolean; word?: LearningWordDTO }> = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ text: text.slice(lastIndex, match.index), isMatch: false });
+    }
+    const matchedWord = wordMap.get(match[1].toLowerCase());
+    parts.push({ text: match[1], isMatch: true, word: matchedWord });
+    lastIndex = regex.lastIndex
+  }
+  if (lastIndex < text.length) {
+    parts.push({ text: text.slice(lastIndex), isMatch: false });
+  }
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.isMatch && part.word ? (
+          <Tooltip
+            key={i}
+            title={
+              <span>
+                <strong>{part.word.word}</strong>
+                {part.word.definitionCn && (
+                  <> — {part.word.definitionCn}</>
+                )}
+              </span>
+            }
+          >
+            <mark
+              style={{
+                background: '#e6f4ff',
+                color: '#1677ff',
+                padding: '1px 3px',
+                borderRadius: 3,
+                textDecoration: 'underline',
+                textDecorationColor: '#91caff',
+                cursor: 'help',
+              }}
+            >
+              {part.text}
+            </mark>
+          </Tooltip>
+        ) : (
+          <span key={i}>{part.text}</span>
+        ),
+      )}
+    </>
+  );
+}
 
 export default function ReadDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,6 +106,9 @@ export default function ReadDetailPage() {
   const [bookmarked, setBookmarked] = useState(false);
   const [showOriginal, setShowOriginal] = useState(true);
 
+  // 学习单词高亮状态
+  const [learningWords, setLearningWords] = useState<LearningWordDTO[]>([]);
+
   // 划词查词状态
   const [popupVisible, setPopupVisible] = useState(false);
   const [popupPos, setPopupPos] = useState({ x: 0, y: 0 });
@@ -35,24 +117,22 @@ export default function ReadDetailPage() {
   const [lookupLoading, setLookupLoading] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
 
-  const loadArticle = async (articleId: number) => {
-    setLoading(true);
-    try {
-      const res = await getArticleDetail(articleId);
-      const data = res.data;
-      setArticle(data);
-      // bookmarked 状态不来自 ArticleDetailDTO（只在列表中有），用本地 state 控制
-      setBookmarked(false);
-    } catch {
-      message.error('加载失败');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // 加载文章 + 学习单词
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (id) loadArticle(parseInt(id));
+    if (!id) return;
+    const articleId = parseInt(id);
+
+    setLoading(true);
+    Promise.all([
+      getArticleDetail(articleId).then((res) => res.data),
+      getLearningWords(50).then((res) => res.data || []).catch(() => []),
+    ])
+      .then(([data, words]) => {
+        setArticle(data);
+        setLearningWords(words);
+        setBookmarked(false);
+      })
+      .finally(() => setLoading(false));
   }, [id]);
 
   const handleTranslate = async () => {
@@ -84,6 +164,15 @@ export default function ReadDetailPage() {
     }
   };
 
+  // 计算文章中包含的学习单词数
+  const matchedWordsInArticle = useMemo(() => {
+    if (!article?.content || learningWords.length === 0) return [];
+    const content = article.content.toLowerCase();
+    return learningWords.filter((w) =>
+      content.includes(w.word.toLowerCase()),
+    );
+  }, [article, learningWords]);
+
   // 从选中文本所在的 Paragraph 元素提取上下文句子
   const getContextSentence = (selected: string): string => {
     const el = document.querySelector('[data-content-area]');
@@ -101,7 +190,7 @@ export default function ReadDetailPage() {
     return ctx.trim();
   };
 
-  // 划词翻译 — 选中文本后自动查询
+  // 划词翻译
   const handleTextSelection = useCallback(() => {
     const selection = window.getSelection();
     const text = selection?.toString().trim();
@@ -110,7 +199,6 @@ export default function ReadDetailPage() {
       return;
     }
 
-    // 获取选中范围的位置
     if (selection && selection.rangeCount > 0) {
       const range = selection.getRangeAt(0);
       const rect = range.getBoundingClientRect();
@@ -124,18 +212,15 @@ export default function ReadDetailPage() {
     setPopupVisible(true);
     setLookupResult(null);
 
-    // 自动调用后端查词 API
     const articleId = parseInt(id || '0');
     if (articleId > 0) {
       setLookupLoading(true);
-      // 取选中文本所在段落作为上下文
       const contextSentence = getContextSentence(text);
       wordLookup({ selectedText: text, articleId, contextSentence })
         .then((res) => {
           setLookupResult(res.data);
         })
         .catch(() => {
-          // 接口调用失败时，使用简单本地翻译降级
           setLookupResult({
             originalWord: text,
             wordCount: text.split(/\s+/).length,
@@ -150,20 +235,17 @@ export default function ReadDetailPage() {
     }
   }, [id]);
 
-  // 添加到生词本（如果后端自动添加失败，手动触发）
   const handleAddToWordbook = async () => {
     if (!lookupResult) return;
     const articleId = parseInt(id || '0');
     if (articleId === 0) return;
 
-    // 如果后端已经自动添加成功
     if (lookupResult.addedToWordbook) {
       message.success('已添加到生词本');
       setPopupVisible(false);
       return;
     }
 
-    // 如果自动添加失败，手动调用
     setLookupLoading(true);
     try {
       const contextSentence = getContextSentence(selectedText);
@@ -184,7 +266,7 @@ export default function ReadDetailPage() {
     }
   };
 
-  // 点击页面其他区域关闭 Popup
+  // 点击外部关闭 Popup
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
@@ -225,6 +307,26 @@ export default function ReadDetailPage() {
 
   return (
     <div style={{ position: 'relative' }}>
+      {/* 学习单词提示条 */}
+      {matchedWordsInArticle.length > 0 && showOriginal && (
+        <Card
+          size="small"
+          style={{ marginBottom: 12, background: '#f6ffed', borderColor: '#b7eb8f' }}
+          styles={{ body: { padding: '8px 16px' } }}
+        >
+          <Space wrap>
+            <BulbOutlined style={{ color: '#52c41a' }} />
+            <Text strong style={{ color: '#52c41a' }}>
+              本文包含 {matchedWordsInArticle.length} 个你正在学习的单词
+            </Text>
+            <span style={{ color: '#8c8c8c', fontSize: 12 }}>
+              （{matchedWordsInArticle.slice(0, 5).map((w) => w.word).join(', ')}
+              {matchedWordsInArticle.length > 5 ? '...' : ''}）
+            </span>
+          </Space>
+        </Card>
+      )}
+
       {/* Top bar */}
       <Card
         style={{ marginBottom: 16 }}
@@ -233,10 +335,7 @@ export default function ReadDetailPage() {
         <Row justify="space-between" align="middle">
           <Col>
             <Space>
-              <Button
-                icon={<ArrowLeftOutlined />}
-                onClick={() => navigate('/read')}
-              >
+              <Button icon={<ArrowLeftOutlined />} onClick={() => navigate('/read')}>
                 返回
               </Button>
               <Tag color="orange">{article.source}</Tag>
@@ -253,7 +352,7 @@ export default function ReadDetailPage() {
                 icon={<LinkOutlined />}
                 onClick={() => window.open(article.url, '_blank')}
               >
-                原文链接
+                原文
               </Button>
               <Button
                 icon={bookmarked ? <StarFilled /> : <StarOutlined />}
@@ -268,7 +367,7 @@ export default function ReadDetailPage() {
                 loading={translating}
                 type={translated ? 'primary' : 'default'}
               >
-                翻译全文
+                翻译
               </Button>
             </Space>
           </Col>
@@ -277,7 +376,6 @@ export default function ReadDetailPage() {
 
       {/* Content card */}
       <Card>
-        {/* Title */}
         <Title level={3}>
           {showOriginal && article.titleCn ? article.titleCn : article.title}
         </Title>
@@ -297,7 +395,6 @@ export default function ReadDetailPage() {
 
         <Divider />
 
-        {/* Language toggle (only when translated) */}
         {translated && (
           <div style={{ marginBottom: 16 }}>
             <Segmented
@@ -311,7 +408,7 @@ export default function ReadDetailPage() {
           </div>
         )}
 
-        {/* Content with word selection */}
+        {/* Content with word highlighting */}
         <div
           data-content-area
           onMouseUp={handleTextSelection}
@@ -327,7 +424,11 @@ export default function ReadDetailPage() {
           {mainContent ? (
             mainContent.split('\n').map((line, i) => (
               <Paragraph key={i} style={{ marginBottom: 8 }}>
-                {line || '\u00A0'}
+                {showOriginal ? (
+                  <HighlightedContent text={line} learningWords={learningWords} />
+                ) : (
+                  line || ' '
+                )}
               </Paragraph>
             ))
           ) : (
@@ -336,7 +437,7 @@ export default function ReadDetailPage() {
         </div>
       </Card>
 
-      {/* 划词查词 Popover — 浮动在选中文本上方 */}
+      {/* 划词查词 Popover */}
       {popupVisible && selectedText && (
         <div
           ref={popupRef}

@@ -1,11 +1,14 @@
 import { useState } from 'react';
-import { Card, Input, Button, Select, Spin, message } from 'antd';
+import { Card, Input, Button, Select, Spin, message, Grid } from 'antd';
 import { SwapOutlined } from '@ant-design/icons';
 import { translateText } from '../api';
 
 const { TextArea } = Input;
+const { useBreakpoint } = Grid;
 
 export default function TranslatePage() {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const [text, setText] = useState('');
   const [result, setResult] = useState('');
   const [from, setFrom] = useState<string>('auto');
@@ -40,16 +43,16 @@ export default function TranslatePage() {
 
   return (
     <Card title="翻译工具">
-      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-        <div style={{ flex: 1 }}>
+      <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexDirection: isMobile ? 'column' : 'row' }}>
+        <div style={{ flex: 1, width: '100%' }}>
           <div style={{ marginBottom: 8 }}>
             <Select value={from} onChange={setFrom} style={{ width: 100 }}
               options={[{ label: '自动检测', value: 'auto' }, { label: '中文', value: 'zh' }, { label: '英文', value: 'en' }]} />
           </div>
           <TextArea rows={8} value={text} onChange={(e) => setText(e.target.value)} placeholder="输入要翻译的文本..." />
         </div>
-        <Button icon={<SwapOutlined />} onClick={handleSwap} style={{ marginTop: 32 }} />
-        <div style={{ flex: 1 }}>
+        <Button icon={<SwapOutlined />} onClick={handleSwap} style={isMobile ? { alignSelf: 'center' } : { marginTop: 32 }} />
+        <div style={{ flex: 1, width: '100%' }}>
           <div style={{ marginBottom: 8 }}>
             <Select value={to} onChange={setTo} style={{ width: 100 }}
               options={[{ label: '中文', value: 'zh' }, { label: '英文', value: 'en' }]} />

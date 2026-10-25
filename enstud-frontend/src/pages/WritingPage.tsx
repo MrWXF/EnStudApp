@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Card, Form, Input, Button, Select, Tabs, List, Tag, message } from 'antd';
+import { Card, Form, Input, Button, Select, Tabs, List, Tag, message, Grid } from 'antd';
 import { SendOutlined } from '@ant-design/icons';
 import { submitWriting, getWritingHistory, getModels } from '../api';
 import type { CorrectionDTO, WritingDTO, ModelEssayDTO } from '../types';
 
 const { TextArea } = Input;
+const { useBreakpoint } = Grid;
 
 export default function WritingPage() {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CorrectionDTO | null>(null);
   const [history, setHistory] = useState<WritingDTO[]>([]);
@@ -65,7 +68,7 @@ export default function WritingPage() {
       {
         key: 'submit', label: '提交作文',
         children: (
-          <div style={{ display: 'flex', gap: 16 }}>
+          <div style={{ display: 'flex', gap: 16, flexDirection: isMobile ? 'column' : 'row' }}>
             <Card style={{ flex: 1 }}>
               <Form form={form} onFinish={handleSubmit} layout="vertical">
                 <Form.Item name="title" rules={[{ required: true, message: '请输入作文标题' }]}>
