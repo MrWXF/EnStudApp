@@ -92,20 +92,11 @@ jobs:
           - service: user-service
             dockerfile: enstud-user-service/Dockerfile
             context: .
-          - service: word-service
-            dockerfile: enstud-word-service/Dockerfile
+          - service: forum-service
+            dockerfile: enstud-forum-service/Dockerfile
             context: .
           - service: chat-service
             dockerfile: enstud-chat-service/Dockerfile
-            context: .
-          - service: writing-service
-            dockerfile: enstud-writing-service/Dockerfile
-            context: .
-          - service: translate-service
-            dockerfile: enstud-translate-service/Dockerfile
-            context: .
-          - service: forum-service
-            dockerfile: enstud-forum-service/Dockerfile
             context: .
           - service: gateway
             dockerfile: enstud-gateway/Dockerfile
@@ -116,6 +107,10 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+
+      # GHCR 要求镜像名全小写（github.repository 为 MrWXF/EnStudApp）
+      - name: Lowercase Image Prefix
+        run: echo "IMAGE_PREFIX_LC=${IMAGE_PREFIX,,}" >> "$GITHUB_ENV"
 
       - name: Download Backend JARs
         uses: actions/download-artifact@v4
@@ -157,8 +152,8 @@ jobs:
           file: ${{ matrix.dockerfile }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:${{ needs.build.outputs.version }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}/${{ matrix.service }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX_LC }}/${{ matrix.service }}:${{ needs.build.outputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX_LC }}/${{ matrix.service }}:latest
           labels: |
             org.opencontainers.image.version=${{ needs.build.outputs.version }}
             org.opencontainers.image.revision=${{ github.sha }}

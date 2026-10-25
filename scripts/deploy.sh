@@ -115,8 +115,9 @@ fi
 # ============================================================
 log "拉取镜像 (版本: ${VERSION})..."
 
-SERVICES=(user-service word-service chat-service writing-service translate-service forum-service gateway nginx)
-GHCR_REPO="${GHCR_REPO:-enstudapp}"
+# 实际部署的容器 → 镜像名映射（content-service 由 forum-service 镜像提供，ai-service 由 chat-service 镜像提供）
+SERVICES=(user-service forum-service chat-service gateway nginx)
+GHCR_REPO="${GHCR_REPO:-mrwxf/enstudapp}"
 
 for svc in "${SERVICES[@]}"; do
     image="ghcr.io/${GHCR_REPO}/${svc}:${VERSION}"
