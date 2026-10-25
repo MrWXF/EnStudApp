@@ -9,6 +9,7 @@
 
 | 版本 | 日期 | 变更描述 | 影响表 |
 |------|------|----------|--------|
+| V10 | 2026-10-25 | 新增词汇量测试记录表（分享卡片功能） | `enstud_vocab_test_record` |
 | v1.2.0 | 2026-06-08 | 新增热门英文文章阅读功能 | `enstud_article`, `enstud_article_read` |
 | v1.1.0 | 2026-06-08 | 新增单词记忆程度等级系统 | `enstud_user_word_record` |
 | V8 | 2026-05-xx | 用户表新增关注数/粉丝数冗余字段 | `enstud_user` |
@@ -24,6 +25,23 @@
 ---
 
 ## 详细变更记录
+
+### V10 — 新增词汇量测试记录表
+
+**日期：** 2026-10-25
+**脚本：** `sql/migrations/V10__add_vocab_test_record.sql`
+**关联服务：** content-service（word 模块）
+
+**变更内容：**
+
+1. **新建 `enstud_vocab_test_record` 表**
+   - 用途：词汇量测试（按频段采样估算法）的结果记录，供分享卡片与历史查询
+   - 关键字段：
+     - `user_id BIGINT NOT NULL` — 用户 ID（索引）
+     - `estimated_size INT NOT NULL` — 估算词汇量
+     - `level_label VARCHAR(32) NOT NULL` — 水平标签（如"四级水平"）
+     - `band_stats VARCHAR(1024)` — 各频段得分明细 JSON
+     - `created_at DATETIME` — 测试时间
 
 ---
 

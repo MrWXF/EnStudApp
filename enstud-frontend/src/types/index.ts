@@ -308,3 +308,25 @@ export interface CheckinResult {
   bonusPoints: number;
   message: string;
 }
+
+// ===== 词汇量测试 =====
+export interface VocabTestWord {
+  word: string;
+}
+
+export interface VocabBandResult {
+  band: number;
+  label: string;
+  known: number;
+  vague: number;
+  unknown: number;
+  ratio: number;
+}
+
+export interface VocabTestResult {
+  estimatedSize: number;
+  levelLabel: string;
+  levelDescription: string;
+  bands: VocabBandResult[];
+  testedAt: string;
+}

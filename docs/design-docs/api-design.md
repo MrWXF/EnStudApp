@@ -322,6 +322,16 @@ GET /api/forum/posts?cursor=eyJpZCI6MTAwfQ==&limit=20
 | `POST` | `/word/wrong-words/review-batch` | 批量复习错词 | 是 |
 | `PUT` | `/word/wrong-words/{recordId}/reset` | 重置错词状态（标记为已掌握） | 是 |
 
+#### 词汇量测试
+
+| 方法 | 路径 | 说明 | 鉴权 |
+|------|------|------|------|
+| `GET` | `/word/vocab-test/words` | 获取测试单词（6 频段 × 5 词 + 2 个防乱猜伪词，共 32 词乱序） | 是 |
+| `POST` | `/word/vocab-test/submit` | 提交作答并估算词汇量（`knowledge`: 2=认识, 1=模糊, 0=不认识） | 是 |
+| `GET` | `/word/vocab-test/latest` | 获取最近一次测试结果（用于分享卡片） | 是 |
+
+估算算法：各频段认知比例（认识=1，模糊=0.5）× 频段容量增量求和；伪词答"认识"每个扣 800。
+
 #### 学习推荐
 
 | 方法 | 路径 | 说明 | 鉴权 |

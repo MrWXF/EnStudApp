@@ -41,6 +41,9 @@
 
     <properties>
         <java.version>17</java.version>
+        <!-- 统一 UTF-8：Windows 上 javac 默认 GBK，中文常量会乱码 -->
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
 
         <!-- Spring Cloud -->
         <spring-cloud.version>2023.0.0</spring-cloud.version>

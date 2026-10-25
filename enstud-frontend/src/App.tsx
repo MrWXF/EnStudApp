@@ -14,6 +14,7 @@ import ForumDetailPage from './pages/ForumDetailPage';
 import CreatePostPage from './pages/CreatePostPage';
 import ReadPage from './pages/ReadPage';
 import ReadDetailPage from './pages/ReadDetailPage';
+import VocabTestPage from './pages/VocabTestPage';
 import { useAuthStore } from './stores';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -41,6 +42,7 @@ export default function App() {
             <Route path="forum/new" element={<CreatePostPage />} />
             <Route path="read" element={<ReadPage />} />
             <Route path="read/:id" element={<ReadDetailPage />} />
+            <Route path="vocab-test" element={<VocabTestPage />} />
           </Route>
         </Routes>
       </BrowserRouter>

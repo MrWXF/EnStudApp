@@ -3,7 +3,7 @@ import { Card, Row, Col, Statistic, Spin, Typography, Progress, Button, Tag, Spa
 import {
   BookOutlined, ReadOutlined, EditOutlined,
   MessageOutlined, RiseOutlined, FireOutlined,
-  RobotOutlined, ThunderboltOutlined,
+  RobotOutlined, ThunderboltOutlined, ExperimentOutlined, ShareAltOutlined,
 } from '@ant-design/icons';
 import { getUserStats, getAiUsage } from '../api/dashboard';
 import { getRecommendedArticles } from '../api/reading';
@@ -11,6 +11,7 @@ import type { AiUsageResponse, AiUsageDetail } from '../api/dashboard';
 import type { UserStats, ArticleDTO } from '../types';
 import { useDashboardStore } from '../stores';
 import { useNavigate } from 'react-router-dom';
+import ShareCardModal from '../components/ShareCardModal';
 
 const { Title, Text } = Typography;
 
@@ -26,6 +27,7 @@ const LEVEL_CONFIG = [
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<UserStats | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
   const [aiUsage, setAiUsage] = useState<AiUsageResponse | null>(null);
   const [recommendedArticles, setRecommendedArticles] = useState<ArticleDTO[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,6 +69,20 @@ export default function DashboardPage() {
       <Title level={3} style={{ marginBottom: 24 }}>
         <RiseOutlined /> 学习仪表盘
       </Title>
+
+      {/* 快捷工具：词汇量测试 / 分享卡片 */}
+      <div style={{ marginBottom: 24 }}>
+        <Space>
+          <Button icon={<ExperimentOutlined />} onClick={() => navigate('/vocab-test')}>
+            词汇量测试
+          </Button>
+          <Button icon={<ShareAltOutlined />} onClick={() => setShareOpen(true)}>
+            生成分享卡片
+          </Button>
+        </Space>
+      </div>
+
+      <ShareCardModal open={shareOpen} onClose={() => setShareOpen(false)} variant="stats" />
 
       {/* 顶部统计卡片 — 四维度学习进度 */}
       <Row gutter={[16, 16]}>

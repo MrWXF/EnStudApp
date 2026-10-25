@@ -4,7 +4,7 @@ import { Layout, Menu, Button, Avatar, Dropdown, Drawer, Grid } from 'antd';
 import {
   HomeOutlined, BookOutlined, MessageOutlined, EditOutlined,
   TranslationOutlined, TeamOutlined, LogoutOutlined, UserOutlined,
-  ReadOutlined, RiseOutlined, AppstoreOutlined,
+  ReadOutlined, RiseOutlined, AppstoreOutlined, ExperimentOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;
@@ -23,6 +23,7 @@ const toolMenuItems = [
   { key: '/writing', icon: <EditOutlined />, label: '写作' },
   { key: '/translate', icon: <TranslationOutlined />, label: '翻译' },
   { key: '/forum', icon: <TeamOutlined />, label: '论坛' },
+  { key: '/vocab-test', icon: <ExperimentOutlined />, label: '词汇量测试' },
 ];
 
 /** 桌面端完整菜单 */

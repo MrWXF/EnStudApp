@@ -1,0 +1,41 @@
+{
+  "bands": [
+    {
+      "band": 1,
+      "label": "初中",
+      "cumulativeSize": 1500,
+      "words": ["water", "book", "happy", "school", "family", "mother", "friend", "apple", "house", "dog", "run", "eat", "sleep", "big", "small", "tree", "flower", "car", "bus", "teacher", "student", "table", "chair", "window", "rain", "sun", "money", "food", "city", "name"]
+    },
+    {
+      "band": 2,
+      "label": "高中",
+      "cumulativeSize": 3500,
+      "words": ["achieve", "benefit", "curious", "describe", "encourage", "environment", "familiar", "genuine", "hesitate", "imagine", "journey", "knowledge", "language", "measure", "nervous", "opportunity", "patient", "quality", "realize", "serious", "technology", "various", "weather", "borrow", "celebrate", "develop", "experience", "grateful", "lonely", "habit"]
+    },
+    {
+      "band": 3,
+      "label": "四级",
+      "cumulativeSize": 4500,
+      "words": ["abundant", "casual", "delicate", "efficient", "flexible", "graduate", "harvest", "identify", "justify", "launch", "maintain", "negotiate", "obstacle", "participate", "qualify", "remarkable", "sufficient", "temporary", "urgent", "volunteer", "wander", "ambition", "barrier", "commercial", "conclude", "distribute", "evaluate", "facility", "individual", "strategy"]
+    },
+    {
+      "band": 4,
+      "label": "六级",
+      "cumulativeSize": 6000,
+      "words": ["alleviate", "ambiguous", "coherent", "comply", "conform", "deteriorate", "dilemma", "eligible", "endeavor", "explicit", "feasible", "hypothesis", "incentive", "jeopardize", "magnify", "notorious", "paradox", "prevalent", "profound", "refute", "skeptical", "subtle", "surplus", "tariff", "versatile", "hamper", "intuition", "mundane", "obscure", "prestige"]
+    },
+    {
+      "band": 5,
+      "label": "考研/雅思",
+      "cumulativeSize": 8000,
+      "words": ["aesthetic", "benevolent", "candid", "commemorate", "consolidate", "discern", "ephemeral", "exemplary", "futile", "gracious", "immaculate", "intricate", "lenient", "meticulous", "nostalgia", "oblivious", "pragmatic", "quaint", "resilient", "scrutiny", "tranquility", "adept", "corroborate", "dilapidated", "eloquent", "exuberant", "fastidious", "gregarious", "imperative", "juxtapose"]
+    },
+    {
+      "band": 6,
+      "label": "进阶",
+      "cumulativeSize": 12000,
+      "words": ["abstruse", "bellicose", "deleterious", "ebullient", "effusive", "garrulous", "iconoclast", "jejune", "lugubrious", "mellifluous", "nefarious", "obfuscate", "pellucid", "quixotic", "recalcitrant", "sycophant", "taciturn", "venerate", "winnow", "xenophobia", "zealot", "alacrity", "circumspect", "diaphanous", "ersatz", "inchoate", "knell", "maudlin", "nadir", "obsequious"]
+    }
+  ],
+  "fakeWords": ["aquaint", "perscriptive", "delibate", "impathy"]
+}

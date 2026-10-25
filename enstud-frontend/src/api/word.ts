@@ -1,5 +1,5 @@
 import { get, post } from './client';
-import type { WordbookDTO, WordCardDTO } from '../types';
+import type { VocabTestResult, VocabTestWord, WordbookDTO, WordCardDTO } from '../types';
 
 export const getWordbooks = () =>
   get<WordbookDTO[]>('/word/wordbooks');
@@ -22,3 +22,17 @@ export interface LearningWordDTO {
 
 export const getLearningWords = (limit = 50) =>
   get<LearningWordDTO[]>('/word/learning-words', { limit });
+
+// ===== 词汇量测试 =====
+
+/** 获取一组测试单词（6 频段 × 5 词 + 2 伪词，共 32 词） */
+export const getVocabTestWords = () =>
+  get<VocabTestWord[]>('/word/vocab-test/words');
+
+/** 提交作答：knowledge 2=认识, 1=模糊, 0=不认识 */
+export const submitVocabTest = (answers: { word: string; knowledge: number }[]) =>
+  post<VocabTestResult>('/word/vocab-test/submit', { answers });
+
+/** 最近一次测试结果 */
+export const getLatestVocabResult = () =>
+  get<VocabTestResult | null>('/word/vocab-test/latest');
