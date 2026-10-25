@@ -269,6 +269,14 @@ GET /api/forum/posts?cursor=eyJpZCI6MTAwfQ==&limit=20
 | `GET` | `/user/goal/status` | 获取今日学习进度 | 是 |
 | `POST` | `/user/goal/checkin` | 打卡（获得积分奖励） | 是 |
 
+#### 今日学习之旅
+
+| 方法 | 路径 | 说明 | 鉴权 |
+|------|------|------|------|
+| `GET` | `/user/daily-journey` | 获取今日任务流状态（阅读/复习/对话/打卡进度聚合） | 是 |
+
+响应字段：`date`（日期）、`streakDays`（连续天数）、`checkedIn`（是否已打卡）、`dailyWordGoal`（每日单词目标）、`todayLearnedWords`（今日学词数）、`dueReviewCount`（到期待复习数）、`todayReadArticles`（今日阅读篇数）、`todayChats`（今日对话数）。
+
 #### 用户关注
 
 | 方法 | 路径 | 说明 | 鉴权 |

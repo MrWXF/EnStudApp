@@ -4,7 +4,7 @@ import { Layout, Menu, Button, Avatar, Dropdown, Drawer, Grid } from 'antd';
 import {
   HomeOutlined, BookOutlined, MessageOutlined, EditOutlined,
   TranslationOutlined, TeamOutlined, LogoutOutlined, UserOutlined,
-  ReadOutlined, RiseOutlined, MenuOutlined, AppstoreOutlined,
+  ReadOutlined, RiseOutlined, AppstoreOutlined,
 } from '@ant-design/icons';
 
 const { Header, Sider, Content } = Layout;

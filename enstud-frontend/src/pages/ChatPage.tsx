@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Card, Input, Button, List, Avatar, Select, Space, message, Tag, Drawer, Grid } from 'antd';
 import {
   SendOutlined, PlusOutlined, UserOutlined, RobotOutlined,
@@ -14,6 +15,7 @@ const { useBreakpoint } = Grid;
 export default function ChatPage() {
   const screens = useBreakpoint();
   const isMobile = !screens.md;
+  const [searchParams] = useSearchParams();
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSession, setActiveSession] = useState<number | null>(null);
   const [messages, setMessages] = useState<MessageDTO[]>([]);
@@ -21,6 +23,7 @@ export default function ChatPage() {
   const [scenario, setScenario] = useState('FREE');
   const [loading, setLoading] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
+  const reviewTriggered = useRef(false);
   const [learningWords, setLearningWords] = useState<LearningWordDTO[]>([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -75,6 +78,15 @@ export default function ChatPage() {
       setLoading(false);
     }
   };
+
+  // 从首页「AI 用词对话」跳转（?review=1）时，自动开始复习对话
+  useEffect(() => {
+    if (searchParams.get('review') === '1' && !reviewTriggered.current) {
+      reviewTriggered.current = true;
+      handleReviewSession();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSend = async () => {
     if (!input.trim() || !activeSession) return;

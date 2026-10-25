@@ -52,11 +52,19 @@ public class WordInternalController {
                         .le(UserWordRecord::getCreatedAt, todayEnd)
         );
 
-        // 累计学习单词数：status = 'LEARNING' or 'MASTERED'
+        // 今日到期待复习单词数：nextReviewTime <= now 且未掌握
+        long dueReviewCount = recordMapper.selectCount(
+                new LambdaQueryWrapper<UserWordRecord>()
+                        .eq(UserWordRecord::getUserId, userId)
+                        .le(UserWordRecord::getNextReviewTime, LocalDateTime.now())
+                        .in(UserWordRecord::getStatus, "LEARNING", "REVIEWING")
+        );
+
+        // 累计学习单词数：已进入学习流程的记录（含复习中、已掌握）
         long totalLearned = recordMapper.selectCount(
                 new LambdaQueryWrapper<UserWordRecord>()
                         .eq(UserWordRecord::getUserId, userId)
-                        .in(UserWordRecord::getStatus, "LEARNING", "MASTERED")
+                        .in(UserWordRecord::getStatus, "LEARNING", "REVIEWING", "MASTERED")
         );
 
         // 记忆等级分布
@@ -81,7 +89,7 @@ public class WordInternalController {
                 notLearned, fuzzy, familiar, basic, proficient, mastered
         );
 
-        return Result.success(new WordInternalStatsResponse(todayLearned, totalLearned, memoryDistribution));
+        return Result.success(new WordInternalStatsResponse(todayLearned, dueReviewCount, totalLearned, memoryDistribution));
     }
 
     /**
@@ -89,6 +97,7 @@ public class WordInternalController {
      */
     public record WordInternalStatsResponse(
             long todayLearned,
+            long dueReviewCount,
             long totalLearned,
             MemoryLevelDistributionDTO memoryDistribution
     ) {}

@@ -37,7 +37,8 @@ logs/
 *.bak
 
 # Legacy client directory (superseded by enstud-frontend)
-client/
+# 锚定根目录，避免误伤 enstud-user-service/.../user/client 等 Java 包目录
+/client/
 
 # Node (frontend)
 enstud-frontend/node_modules/

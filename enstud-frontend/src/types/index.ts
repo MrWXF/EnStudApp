@@ -290,3 +290,21 @@ export interface UserStats {
 export interface MemoryLevelDistribution {
   [level: string]: number;
 }
+
+// ===== 今日学习之旅 =====
+export interface DailyJourney {
+  date: string;
+  streakDays: number;
+  checkedIn: boolean;
+  dailyWordGoal: number;
+  todayLearnedWords: number;
+  dueReviewCount: number;
+  todayReadArticles: number;
+  todayChats: number;
+}
+
+export interface CheckinResult {
+  streakDays: number;
+  bonusPoints: number;
+  message: string;
+}
