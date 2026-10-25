@@ -1,4 +1,4 @@
-server:
+﻿server:
   port: 8080
 
 spring:
@@ -24,42 +24,42 @@ spring:
           enabled: true
           lower-case-service-id: true
       routes:
-        # 用户服务
+        # 鐢ㄦ埛鏈嶅姟
         - id: user-service
           uri: lb://enstud-user-service
           predicates:
-            - Path=/user/**,/api/user/**
-        # 单词服务
+            - Path=/user/**
+        # 鍗曡瘝鏈嶅姟
         - id: word-service
-          uri: lb://enstud-word-service
+          uri: lb://enstud-content-service
           predicates:
-            - Path=/word/**,/api/word/**
-        # AI 对话服务
+            - Path=/word/**
+        # AI 瀵硅瘽鏈嶅姟
         - id: chat-service
-          uri: lb://enstud-chat-service
+          uri: lb://enstud-ai-service
           predicates:
-            - Path=/chat/**,/api/chat/**
-        # 写作服务
+            - Path=/chat/**
+        # 鍐欎綔鏈嶅姟
         - id: writing-service
-          uri: lb://enstud-writing-service
+          uri: lb://enstud-content-service
           predicates:
-            - Path=/writing/**,/api/writing/**
-        # 翻译服务
+            - Path=/writing/**
+        # 缈昏瘧鏈嶅姟
         - id: translate-service
-          uri: lb://enstud-translate-service
+          uri: lb://enstud-ai-service
           predicates:
-            - Path=/translate/**,/api/translate/**
-        # 论坛服务
+            - Path=/translate/**
+        # 璁哄潧鏈嶅姟
         - id: forum-service
-          uri: lb://enstud-forum-service
+          uri: lb://enstud-content-service
           predicates:
-            - Path=/forum/**,/api/forum/**
-        # 阅读服务
+            - Path=/forum/**
+        # 闃呰鏈嶅姟
         - id: read-service
-          uri: lb://enstud-read-service
+          uri: lb://enstud-content-service
           predicates:
-            - Path=/read/**,/api/read/**
-      # 全局 CORS 配置
+            - Path=/read/**
+      # 鍏ㄥ眬 CORS 閰嶇疆
       globalcors:
         cors-configurations:
           '[/**]':
@@ -73,15 +73,15 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
 
-# JWT 配置
+# JWT 閰嶇疆
 jwt:
   secret: ${JWT_SECRET:enstud-app-jwt-secret-key-2024-production-must-change}
 
-# 不需要鉴权的路径（白名单）
+# 涓嶉渶瑕侀壌鏉冪殑璺緞锛堢櫧鍚嶅崟锛?
 gateway:
-  white-list: /user/register,/user/login,/forum/posts,/word/wordbooks
+  white-list: /user/register,/user/login,/api/user/register,/api/user/login,/forum/categories,/forum/posts,/read/articles,/writing/topics,/actuator/health
 
-# 日志
+# 鏃ュ織
 logging:
   level:
     com.enstud.gateway: DEBUG
@@ -95,3 +95,4 @@ management:
   endpoint:
     health:
       show-details: always
+

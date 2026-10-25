@@ -1,12 +1,7 @@
-# EnStudApp — Docker Compose 编排
-# 基础设施（MySQL/Redis/Nacos/ES）已独立运行，此处只编排微服务 + 网关 + Nginx
-#
-# 用法：
-#   开发环境：docker compose up -d
-#   生产环境：docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+﻿version: '3.8'
 
 services:
-  # ==================== 微服务（无依赖，可并行启动） ====================
+  # ==================== 用户服务（用户+单词）====================
   user-service:
     build:
       context: .
@@ -21,11 +16,13 @@ services:
       - SPRING_DATA_REDIS_HOST=enstud-redis
       - SPRING_DATA_REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET:-enstud-app-jwt-secret-key-2024-production-must-change}
-      - SERVICE_WORD=http://enstud-word-service:8082
-      - SERVICE_READ=http://enstud-word-service:8082
-      - SERVICE_WRITING=http://enstud-writing-service:8084
-      - SERVICE_CHAT=http://enstud-chat-service:8083
-      - SERVICE_FORUM=http://enstud-forum-service:8086
+      - SERVICE_CONTENT=http://enstud-content-service:8082
+      - SERVICE_AI=http://enstud-ai-service:8083
+      - SERVICE_WORD=http://enstud-user-service:8081
+      - SERVICE_READ=http://enstud-content-service:8082
+      - SERVICE_WRITING=http://enstud-content-service:8082
+      - SERVICE_CHAT=http://enstud-ai-service:8083
+      - SERVICE_FORUM=http://enstud-content-service:8082
     ports:
       - "${USER_SERVICE_PORT:-8081}:8081"
     volumes:
@@ -34,11 +31,12 @@ services:
       enstud-network:
         ipv4_address: 172.20.0.20
 
-  word-service:
+  # ==================== 内容服务（论坛+阅读+写作）====================
+  content-service:
     build:
       context: .
-      dockerfile: enstud-word-service/Dockerfile
-    container_name: enstud-word-service
+      dockerfile: enstud-forum-service/Dockerfile
+    container_name: enstud-content-service
     restart: unless-stopped
     environment:
       - NACOS_SERVER_ADDR=enstud-nacos:8848
@@ -47,19 +45,25 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
       - SPRING_DATA_REDIS_HOST=enstud-redis
       - SPRING_DATA_REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-enstud-app-jwt-secret-key-2024-production-must-change}
+      - SERVICE_USER=http://enstud-user-service:8081
+      - SERVICE_WORD=http://enstud-user-service:8081
+      - SERVICE_READ=http://enstud-content-service:8082
+      - SERVICE_WRITING=http://enstud-content-service:8082
     ports:
-      - "${WORD_SERVICE_PORT:-8082}:8082"
+      - "${CONTENT_SERVICE_PORT:-8082}:8082"
     volumes:
-      - ./logs/word-service:/app/logs/enstud-word-service
+      - ./logs/content-service:/app/logs/enstud-content-service
     networks:
       enstud-network:
         ipv4_address: 172.20.0.21
 
-  chat-service:
+  # ==================== AI 服务（聊天+翻译）====================
+  ai-service:
     build:
       context: .
       dockerfile: enstud-chat-service/Dockerfile
-    container_name: enstud-chat-service
+    container_name: enstud-ai-service
     restart: unless-stopped
     environment:
       - NACOS_SERVER_ADDR=enstud-nacos:8848
@@ -68,98 +72,19 @@ services:
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
       - SPRING_DATA_REDIS_HOST=enstud-redis
       - SPRING_DATA_REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-enstud-app-jwt-secret-key-2024-production-must-change}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
       - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
+      - DEEPSEEK_CHAT_DAILY_LIMIT=${DEEPSEEK_CHAT_DAILY_LIMIT:-50}
+      - DEEPSEEK_WRITING_DAILY_LIMIT=${DEEPSEEK_WRITING_DAILY_LIMIT:-10}
+      - DEEPSEEK_TRANSLATE_DAILY_LIMIT=${DEEPSEEK_TRANSLATE_DAILY_LIMIT:-100}
     ports:
-      - "${CHAT_SERVICE_PORT:-8083}:8083"
+      - "${AI_SERVICE_PORT:-8083}:8083"
     volumes:
-      - ./logs/chat-service:/app/logs/enstud-chat-service
+      - ./logs/ai-service:/app/logs/enstud-ai-service
     networks:
       enstud-network:
         ipv4_address: 172.20.0.22
-
-  writing-service:
-    build:
-      context: .
-      dockerfile: enstud-writing-service/Dockerfile
-    container_name: enstud-writing-service
-    restart: unless-stopped
-    environment:
-      - NACOS_SERVER_ADDR=enstud-nacos:8848
-      - SPRING_DATASOURCE_URL=jdbc:mysql://enstud-mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
-      - SPRING_DATA_REDIS_HOST=enstud-redis
-      - SPRING_DATA_REDIS_PORT=6379
-      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
-      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
-    ports:
-      - "${WRITING_SERVICE_PORT:-8084}:8084"
-    volumes:
-      - ./logs/writing-service:/app/logs/enstud-writing-service
-    networks:
-      enstud-network:
-        ipv4_address: 172.20.0.23
-
-  translate-service:
-    build:
-      context: .
-      dockerfile: enstud-translate-service/Dockerfile
-    container_name: enstud-translate-service
-    restart: unless-stopped
-    environment:
-      - NACOS_SERVER_ADDR=enstud-nacos:8848
-      - SPRING_DATA_REDIS_HOST=enstud-redis
-      - SPRING_DATA_REDIS_PORT=6379
-    ports:
-      - "${TRANSLATE_SERVICE_PORT:-8085}:8085"
-    volumes:
-      - ./logs/translate-service:/app/logs/enstud-translate-service
-    networks:
-      enstud-network:
-        ipv4_address: 172.20.0.24
-
-  forum-service:
-    build:
-      context: .
-      dockerfile: enstud-forum-service/Dockerfile
-    container_name: enstud-forum-service
-    restart: unless-stopped
-    environment:
-      - NACOS_SERVER_ADDR=enstud-nacos:8848
-      - SPRING_DATASOURCE_URL=jdbc:mysql://enstud-mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
-      - SPRING_DATA_REDIS_HOST=enstud-redis
-      - SPRING_DATA_REDIS_PORT=6379
-    ports:
-      - "${FORUM_SERVICE_PORT:-8086}:8086"
-    volumes:
-      - ./logs/forum-service:/app/logs/enstud-forum-service
-    networks:
-      enstud-network:
-        ipv4_address: 172.20.0.25
-
-  read-service:
-    build:
-      context: .
-      dockerfile: enstud-read-service/Dockerfile
-    container_name: enstud-read-service
-    restart: unless-stopped
-    environment:
-      - NACOS_SERVER_ADDR=enstud-nacos:8848
-      - SPRING_DATASOURCE_URL=jdbc:mysql://enstud-mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
-      - SPRING_DATA_REDIS_HOST=enstud-redis
-      - SPRING_DATA_REDIS_PORT=6379
-    ports:
-      - "${READ_SERVICE_PORT:-8087}:8087"
-    volumes:
-      - ./logs/read-service:/app/logs/enstud-read-service
-    networks:
-      enstud-network:
-        ipv4_address: 172.20.0.26
 
   # ==================== API 网关 ====================
   gateway:
@@ -176,20 +101,9 @@ services:
     ports:
       - "${GATEWAY_PORT:-8080}:8080"
     depends_on:
-      user-service:
-        condition: service_healthy
-      word-service:
-        condition: service_healthy
-      chat-service:
-        condition: service_healthy
-      writing-service:
-        condition: service_healthy
-      translate-service:
-        condition: service_healthy
-      forum-service:
-        condition: service_healthy
-      read-service:
-        condition: service_healthy
+      - user-service
+      - content-service
+      - ai-service
     networks:
       enstud-network:
         ipv4_address: 172.20.0.30
@@ -244,41 +158,10 @@ services:
       - "${GRAFANA_PORT:-3000}:3000"
     depends_on:
       - prometheus
-      - loki
     networks:
       enstud-network:
         ipv4_address: 172.20.0.41
 
-  loki:
-    image: grafana/loki:3.0.0
-    container_name: enstud-loki
-    restart: unless-stopped
-    command: -config.file=/etc/loki/loki-config.yml
-    volumes:
-      - ./loki/loki-config.yml:/etc/loki/loki-config.yml:ro
-      - loki-data:/loki
-    ports:
-      - "${LOKI_PORT:-3100}:3100"
-    networks:
-      enstud-network:
-        ipv4_address: 172.20.0.42
-
-  promtail:
-    image: grafana/promtail:3.0.0
-    container_name: enstud-promtail
-    restart: unless-stopped
-    command: -config.file=/etc/promtail/promtail-config.yml
-    volumes:
-      - ./promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
-      - ./logs:/logs:ro
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - loki
-    networks:
-      enstud-network:
-        ipv4_address: 172.20.0.43
-
-# ==================== 网络和存储 ====================
 networks:
   enstud-network:
     external: true
@@ -286,4 +169,3 @@ networks:
 volumes:
   prometheus-data:
   grafana-data:
-  loki-data:

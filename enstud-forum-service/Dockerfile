@@ -1,7 +1,5 @@
-FROM eclipse-temurin:17-jre-alpine
-RUN apk add --no-cache curl
+﻿FROM eclipse-temurin:17-jre-alpine
 WORKDIR /app
 COPY enstud-forum-service/target/*.jar app.jar
-HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-  CMD curl -sf http://localhost:8086/actuator/health || exit 1
+EXPOSE 8082
 ENTRYPOINT ["java", "-jar", "app.jar"]

@@ -1,5 +1,5 @@
-server:
-  port: 8086
+﻿server:
+  port: 8082
 
 spring:
   config:
@@ -9,30 +9,23 @@ spring:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
   application:
-    name: enstud-forum-service
+    name: enstud-content-service
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:172.20.0.2}:${MYSQL_PORT:3306}/enstud_app?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME:root}
     password: ${MYSQL_PASSWORD:root}
-  data:
-    redis:
-      host: ${REDIS_HOST:172.20.0.3}
-      port: ${REDIS_PORT:6379}
-
-mybatis-plus:
-  configuration:
-    map-underscore-to-camel-case: true
-  global-config:
-    db-config:
-      logic-delete-field: isDeleted
-      logic-delete-value: 1
-      logic-not-delete-value: 0
-
 knife4j:
   enable: true
   setting:
     language: zh_cn
-
 logging:
   level:
-    com.enstud.forum: DEBUG
+    com.enstud.writing: DEBUG
+
+# AI 閰嶇疆
+ai:
+  mock: false  # true=浣跨敤Mock瀹㈡埛绔? false=浣跨敤DeepSeek鐪熷疄瀹㈡埛绔?deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: https://api.deepseek.com
+  model: deepseek-chat
+  timeout: 60

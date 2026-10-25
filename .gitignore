@@ -52,3 +52,8 @@ nacos-logs/
 
 # E2E test output
 e2e/test-results/
+
+# Local deploy artifacts (binaries, not for VCS)
+deploy-package/
+deploy-package.tar.gz
+docker-images/

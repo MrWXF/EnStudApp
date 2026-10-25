@@ -1,0 +1,45 @@
+﻿# 多阶段构建 - 构建阶段
+FROM maven:3.9-eclipse-temurin-17 AS builder
+WORKDIR /app
+COPY pom.xml .
+COPY enstud-common ./enstud-common
+COPY enstud-gateway ./enstud-gateway
+COPY enstud-user-service ./enstud-user-service
+COPY enstud-word-service ./enstud-word-service
+COPY enstud-forum-service ./enstud-forum-service
+COPY enstud-chat-service ./enstud-chat-service
+COPY enstud-writing-service ./enstud-writing-service
+COPY enstud-translate-service ./enstud-translate-service
+COPY enstud-read-service ./enstud-read-service
+
+# 构建所有模块（先单独构建 common 的 test-jar，再整体打包跳过测试）
+RUN mvn clean install -pl enstud-common -am -DskipTests \
+    && mvn clean package -DskipTests -Dmaven.test.skip=true
+
+# 运行阶段 - 用户服务
+FROM eclipse-temurin:17-jre-alpine AS user-service
+WORKDIR /app
+COPY --from=builder /app/enstud-user-service/target/*.jar app.jar
+EXPOSE 8081
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
+# 运行阶段 - 内容服务
+FROM eclipse-temurin:17-jre-alpine AS content-service
+WORKDIR /app
+COPY --from=builder /app/enstud-forum-service/target/*.jar app.jar
+EXPOSE 8082
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
+# 运行阶段 - AI 服务
+FROM eclipse-temurin:17-jre-alpine AS ai-service
+WORKDIR /app
+COPY --from=builder /app/enstud-chat-service/target/*.jar app.jar
+EXPOSE 8083
+ENTRYPOINT ["java", "-jar", "app.jar"]
+
+# 运行阶段 - 网关
+FROM eclipse-temurin:17-jre-alpine AS gateway
+WORKDIR /app
+COPY --from=builder /app/enstud-gateway/target/*.jar app.jar
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]

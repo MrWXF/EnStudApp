@@ -10,7 +10,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Import;
 
-@SpringBootApplication(exclude = RedissonAutoConfigurationV2.class)
+@SpringBootApplication(scanBasePackages = {"com.enstud.chat", "com.enstud.translate", "com.enstud.common"}, exclude = RedissonAutoConfigurationV2.class)
 @Import({GlobalExceptionHandler.class, MybatisPlusConfig.class, WebMvcConfig.class})
 @MapperScan("com.enstud.chat.mapper")
 @EnableFeignClients(basePackages = "com.enstud.common.feign")

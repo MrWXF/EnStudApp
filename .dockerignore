@@ -1,0 +1,49 @@
+﻿# Git
+.git/
+.gitignore
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.swp
+*.swo
+
+# 构建产物
+target/
+build/
+dist/
+node_modules/
+
+# 临时文件
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# 环境文件
+.env
+.env.local
+
+# 文档
+docs/
+*.md
+!README.md
+
+# 测试
+test/
+tests/
+e2e/
+
+# 备份
+*.backup/
+
+# Docker
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# 其他
+logs/
+*.jar.original

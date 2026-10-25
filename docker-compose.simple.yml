@@ -1,0 +1,241 @@
+﻿version: '3.8'
+
+services:
+  # ==================== 基础设施 ====================
+  mysql:
+    image: mysql:8.0
+    container_name: enstud-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: enstud_app
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    ports:
+      - "${MYSQL_PORT:-13306}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./sql/init:/docker-entrypoint-initdb.d:ro
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    networks:
+      - enstud-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: enstud-redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - enstud-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nacos:
+    image: nacos/nacos-server:v2.2.3
+    container_name: enstud-nacos
+    restart: unless-stopped
+    environment:
+      MODE: standalone
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+      JVM_XMN: 128m
+    ports:
+      - "${NACOS_PORT:-8848}:8848"
+      - "${NACOS_GRPC_PORT:-9848}:9848"
+    networks:
+      - enstud-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8848/nacos/v1/console/health/readiness"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+
+  # ==================== 应用服务 ====================
+  user-service:
+    build:
+      context: .
+      dockerfile: enstud-user-service/Dockerfile
+    container_name: enstud-user-service
+    restart: unless-stopped
+    environment:
+      - NACOS_SERVER_ADDR=enstud-nacos:8848
+      - SPRING_DATASOURCE_URL=jdbc:mysql://enstud-mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - SPRING_DATA_REDIS_HOST=enstud-redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-enstud-app-jwt-secret-key-2024-production-must-change}
+      - SERVICE_CONTENT=http://enstud-content-service:8082
+      - SERVICE_AI=http://enstud-ai-service:8083
+    ports:
+      - "${USER_SERVICE_PORT:-8081}:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+    networks:
+      - enstud-network
+
+  content-service:
+    build:
+      context: .
+      dockerfile: enstud-forum-service/Dockerfile
+    container_name: enstud-content-service
+    restart: unless-stopped
+    environment:
+      - NACOS_SERVER_ADDR=enstud-nacos:8848
+      - SPRING_DATASOURCE_URL=jdbc:mysql://enstud-mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - SPRING_DATA_REDIS_HOST=enstud-redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-enstud-app-jwt-secret-key-2024-production-must-change}
+      - SERVICE_USER=http://enstud-user-service:8081
+    ports:
+      - "${CONTENT_SERVICE_PORT:-8082}:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    networks:
+      - enstud-network
+
+  ai-service:
+    build:
+      context: .
+      dockerfile: enstud-chat-service/Dockerfile
+    container_name: enstud-ai-service
+    restart: unless-stopped
+    environment:
+      - NACOS_SERVER_ADDR=enstud-nacos:8848
+      - SPRING_DATASOURCE_URL=jdbc:mysql://enstud-mysql:3306/enstud_app?useUnicode=true&characterEncoding=utf8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=root
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
+      - SPRING_DATA_REDIS_HOST=enstud-redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-enstud-app-jwt-secret-key-2024-production-must-change}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com/v1}
+    ports:
+      - "${AI_SERVICE_PORT:-8083}:8083"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      nacos:
+        condition: service_healthy
+      user-service:
+        condition: service_started
+    networks:
+      - enstud-network
+
+  gateway:
+    build:
+      context: .
+      dockerfile: enstud-gateway/Dockerfile
+    container_name: enstud-gateway
+    restart: unless-stopped
+    environment:
+      - NACOS_SERVER_ADDR=enstud-nacos:8848
+      - REDIS_HOST=enstud-redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-enstud-app-jwt-secret-key-2024-production-must-change}
+    ports:
+      - "${GATEWAY_PORT:-8080}:8080"
+    depends_on:
+      user-service:
+        condition: service_started
+      content-service:
+        condition: service_started
+      ai-service:
+        condition: service_started
+    networks:
+      - enstud-network
+
+  # ==================== 前端 ====================
+  nginx:
+    image: nginx:alpine
+    container_name: enstud-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./enstud-frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - gateway
+    networks:
+      - enstud-network
+
+  # ==================== 监控 ====================
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: enstud-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    networks:
+      - enstud-network
+
+  grafana:
+    image: grafana/grafana:10.4.2
+    container_name: enstud-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3000}:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - enstud-network
+
+# ==================== 网络 ====================
+networks:
+  enstud-network:
+    driver: bridge
+
+# ==================== 存储 ====================
+volumes:
+  mysql-data:
+    driver: local
+  redis-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
+    driver: local

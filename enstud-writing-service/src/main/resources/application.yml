@@ -1,5 +1,5 @@
-server:
-  port: 8084
+﻿server:
+  port: 8082
 
 spring:
   config:
@@ -9,7 +9,7 @@ spring:
       discovery:
         server-addr: ${NACOS_SERVER_ADDR:localhost:8848}
   application:
-    name: enstud-writing-service
+    name: enstud-content-service
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:172.20.0.2}:${MYSQL_PORT:3306}/enstud_app?useUnicode=true&characterEncoding=UTF-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
     username: ${MYSQL_USERNAME:root}
@@ -22,10 +22,9 @@ logging:
   level:
     com.enstud.writing: DEBUG
 
-# AI 配置
+# AI 閰嶇疆
 ai:
-  mock: false  # true=使用Mock客户端, false=使用DeepSeek真实客户端
-deepseek:
+  mock: false  # true=浣跨敤Mock瀹㈡埛绔? false=浣跨敤DeepSeek鐪熷疄瀹㈡埛绔?deepseek:
   api-key: ${DEEPSEEK_API_KEY:}
   base-url: https://api.deepseek.com
   model: deepseek-chat
