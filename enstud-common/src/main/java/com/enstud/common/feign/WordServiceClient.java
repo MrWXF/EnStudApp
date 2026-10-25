@@ -12,7 +12,7 @@ import java.util.Map;
 /**
  * 单词服务 Feign 客户端 — 跨服务获取单词学习数据
  */
-@FeignClient(name = "enstud-word-service", contextId = "wordServiceClient")
+@FeignClient(name = "enstud-content-service", contextId = "wordServiceClient")
 public interface WordServiceClient {
 
     /**

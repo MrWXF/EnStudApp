@@ -5,11 +5,13 @@ import com.enstud.common.Result;
 import com.enstud.common.SecurityContext;
 import com.enstud.word.dto.AdjustMemoryLevelRequest;
 import com.enstud.word.dto.AddWordFromReadingRequest;
+import com.enstud.word.dto.LearningWordDTO;
 import com.enstud.word.dto.MemoryLevelDistributionDTO;
 import com.enstud.word.dto.WordCardDTO;
 import com.enstud.word.dto.WordbookDTO;
 import com.enstud.word.service.WordService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,15 @@ import java.util.List;
 public class WordController {
 
     private final WordService wordService;
+
+    @Operation(summary = "获取正在学习的单词", description = "用于阅读高亮、AI 对话融入提示等学习闭环场景")
+    @GetMapping("/learning-words")
+    public Result<List<LearningWordDTO>> getLearningWords(
+            @Parameter(description = "数量上限", example = "50")
+            @RequestParam(defaultValue = "50") int limit) {
+        Long userId = SecurityContext.getCurrentUserId();
+        return Result.success(wordService.getLearningWords(userId, limit));
+    }
 
     @Operation(summary = "获取词库列表")
     @GetMapping("/wordbooks")

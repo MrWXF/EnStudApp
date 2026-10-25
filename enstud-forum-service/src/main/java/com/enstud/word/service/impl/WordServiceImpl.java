@@ -7,6 +7,7 @@ import com.enstud.common.entity.Word;
 import com.enstud.common.enums.MemoryLevel;
 import com.enstud.word.algorithm.Sm2Algorithm;
 import com.enstud.word.dto.AddWordFromReadingRequest;
+import com.enstud.word.dto.LearningWordDTO;
 import com.enstud.word.dto.MemoryLevelDistributionDTO;
 import com.enstud.word.dto.WordCardDTO;
 import com.enstud.word.dto.WordbookDTO;
@@ -418,5 +419,36 @@ public class WordServiceImpl implements WordService {
         }
 
         return record.getId();
+    }
+
+    @Override
+    public List<LearningWordDTO> getLearningWords(Long userId, int limit) {
+        // 查询用户正在学习（未掌握）的单词记录
+        List<UserWordRecord> records = recordMapper.selectList(
+                new LambdaQueryWrapper<UserWordRecord>()
+                        .eq(UserWordRecord::getUserId, userId)
+                        .in(UserWordRecord::getStatus, "LEARNING", "REVIEWING")
+                        .orderByDesc(UserWordRecord::getUpdatedAt)
+                        .last("LIMIT " + limit)
+        );
+
+        if (records.isEmpty()) {
+            return List.of();
+        }
+
+        // 批量获取单词详情
+        List<Long> wordIds = records.stream().map(UserWordRecord::getWordId).toList();
+        Map<Long, Word> wordMap = wordMapper.selectBatchIds(wordIds).stream()
+                .collect(Collectors.toMap(Word::getId, w -> w));
+
+        return records.stream()
+                .map(r -> {
+                    Word w = wordMap.get(r.getWordId());
+                    if (w == null) return null;
+                    return new LearningWordDTO(w.getId(), w.getWord(), w.getDefinitionCn(),
+                            w.getPhoneticUs(), r.getMasteryLevel(), r.getStatus());
+                })
+                .filter(java.util.Objects::nonNull)
+                .toList();
     }
 }

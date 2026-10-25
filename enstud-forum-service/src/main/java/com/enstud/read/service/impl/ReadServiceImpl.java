@@ -1,6 +1,10 @@
 package com.enstud.read.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.enstud.common.ai.DeepSeekClient;
+import com.enstud.common.entity.Word;
+import com.enstud.common.feign.WordServiceClient;
+import com.enstud.common.Result;
 import com.enstud.read.ai.ArticleAggregator;
 import com.enstud.read.dto.*;
 import com.enstud.read.entity.Article;
@@ -9,14 +13,13 @@ import com.enstud.read.mapper.ArticleMapper;
 import com.enstud.read.mapper.ArticleReadRecordMapper;
 import com.enstud.read.mapper.ArticleWordMapper;
 import com.enstud.read.service.ReadService;
-import com.enstud.common.feign.WordServiceClient;
-import com.enstud.common.Result;
+import com.enstud.word.dto.AddWordFromReadingRequest;
+import com.enstud.word.mapper.WordMapper;
+import com.enstud.word.service.WordService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -33,13 +36,27 @@ public class ReadServiceImpl implements ReadService {
     private final ArticleAggregator articleAggregator;
     private final ArticleWordMapper articleWordMapper;
     private final WordServiceClient wordServiceClient;
-    private final RestTemplate restTemplate;
 
-    @Value("${enstud.services.translate-url:http://localhost:8085}")
-    private String translateServiceUrl;
+    /** DeepSeek 客户端（文章翻译与划词查词） */
+    private final DeepSeekClient deepSeekClient;
 
-    @Value("${enstud.services.word-url:http://localhost:8082}")
-    private String wordServiceUrl;
+    /** 单词服务（同服务内直调，加入生词本） */
+    private final WordService wordService;
+
+    /** 词库 Mapper（划词优先查本地词典） */
+    private final WordMapper wordMapper;
+
+    /** 翻译提示词（英文 → 中文） */
+    private static final String TRANSLATE_PROMPT = """
+            You are a professional translator. Translate the user's English text into natural Chinese.
+            Output ONLY the translation, no explanations or quotes. Preserve line breaks and formatting.
+            """;
+
+    /** 单次翻译的最大字符数（防止超长正文超时） */
+    private static final int MAX_TRANSLATE_LENGTH = 8000;
+
+    /** 判定为"单个单词"的正则（可加入生词本） */
+    private static final String SINGLE_WORD_PATTERN = "^[a-zA-Z][a-zA-Z\\-']{1,49}$";
 
     @Override
     public List<ArticleDTO> getHotArticles(Long userId, String source) {
@@ -197,26 +214,29 @@ public class ReadServiceImpl implements ReadService {
     }
 
     /**
-     * 模拟翻译（实际接入 translate-service）
+     * 调用 DeepSeek 翻译文章（结果持久化到 titleCn/summaryCn/contentCn，全局缓存）
      */
     private void translateArticle(Article article) {
-        // 模拟翻译标题
-        if (article.getTitle() != null && !article.getTitle().contains("（")) {
-            article.setTitleCn("（" + article.getTitle() + " 的中文翻译）");
-        }
-        // 模拟翻译摘要
-        if (article.getSummary() != null && !article.getSummary().startsWith("（")) {
-            String cn = article.getSummary().length() > 50
-                    ? article.getSummary().substring(0, 50) + "..."
-                    : article.getSummary();
-            article.setSummaryCn("（" + cn + " 的中文翻译）");
-        }
-        // 模拟翻译正文
-        if (article.getContent() != null && article.getContentCn() == null) {
-            String cn = article.getContent().length() > 100
-                    ? article.getContent().substring(0, 100) + "……"
-                    : article.getContent();
-            article.setContentCn("（" + cn + " 的中文翻译）");
+        try {
+            if ((article.getTitleCn() == null || article.getTitleCn().isBlank())
+                    && article.getTitle() != null && !article.getTitle().isBlank()) {
+                article.setTitleCn(translateEnToCn(article.getTitle(), null));
+            }
+            if ((article.getSummaryCn() == null || article.getSummaryCn().isBlank())
+                    && article.getSummary() != null && !article.getSummary().isBlank()) {
+                article.setSummaryCn(translateEnToCn(article.getSummary(), null));
+            }
+            if ((article.getContentCn() == null || article.getContentCn().isBlank())
+                    && article.getContent() != null && !article.getContent().isBlank()) {
+                String content = article.getContent();
+                if (content.length() > MAX_TRANSLATE_LENGTH) {
+                    content = content.substring(0, MAX_TRANSLATE_LENGTH) + "\n\n（正文过长，仅翻译前部分）";
+                }
+                article.setContentCn(translateEnToCn(content, null));
+            }
+        } catch (Exception e) {
+            // 翻译失败不阻塞阅读流程，下次访问再试
+            log.warn("Article translation failed, id={}: {}", article.getId(), e.getMessage());
         }
     }
 
@@ -265,30 +285,33 @@ public class ReadServiceImpl implements ReadService {
     @Override
     public WordLookupResponse wordLookup(Long userId, WordLookupRequest request) {
         String text = request.getSelectedText().trim();
+        boolean isSingleWord = text.matches(SINGLE_WORD_PATTERN);
 
-        // 1. 调用 translate-service 获取翻译
-        String translatedText = callTranslate(text);
+        // 1. 优先查本地词库（命中即免 AI 调用，且自带音标/词性）
+        Word dictWord = null;
+        if (isSingleWord) {
+            dictWord = wordMapper.selectOne(
+                    new LambdaQueryWrapper<Word>()
+                            .eq(Word::getWord, text.toLowerCase())
+                            .last("LIMIT 1"));
+        }
 
-        // 2. 尝试加入生词本（只有选中单个单词或简单短语时加入）
+        // 2. 词典未命中再调 DeepSeek 翻译
+        String translation;
+        if (dictWord != null && dictWord.getDefinitionCn() != null && !dictWord.getDefinitionCn().isBlank()) {
+            translation = dictWord.getDefinitionCn();
+        } else {
+            translation = translateEnToCn(text, userId);
+        }
+
+        // 3. 尝试加入生词本（单词服务本地直调，不再走 HTTP）
         Long wordRecordId = null;
-        if (text.matches("^[a-zA-Z][a-zA-Z\\-']{1,49}$")) {
+        if (userId != null && isSingleWord) {
             try {
-                // 构建 AddWordFromReading 请求
-                Map<String, Object> addReq = new HashMap<>();
-                addReq.put("word", text.toLowerCase());
-                addReq.put("definitionCn", translatedText);
-                addReq.put("contextSentence", request.getContextSentence());
-
-                // 通过 Gateway 转发或直接调用 word-service
-                String addUrl = wordServiceUrl + "/word/reading/add";
-                Map<String, Object> addResult = restTemplate.postForObject(addUrl, addReq, Map.class);
-
-                if (addResult != null && "200".equals(String.valueOf(addResult.get("code")))) {
-                    Object data = addResult.get("data");
-                    if (data instanceof Number num) {
-                        wordRecordId = num.longValue();
-                    }
-                }
+                AddWordFromReadingRequest addReq = new AddWordFromReadingRequest(
+                        text.toLowerCase(), translation, null, request.getContextSentence(),
+                        dictWord != null ? dictWord.getPartOfSpeech() : null);
+                wordRecordId = wordService.addWordFromReading(userId, addReq);
             } catch (Exception e) {
                 log.warn("Failed to add word '{}' to wordbook for user {}: {}",
                         text, userId, e.getMessage());
@@ -296,50 +319,28 @@ public class ReadServiceImpl implements ReadService {
             }
         }
 
-        // 3. 构建响应
+        // 4. 构建响应
         WordLookupResponse resp = new WordLookupResponse();
         resp.setOriginalWord(text);
         resp.setWordCount(text.split("\\s+").length);
-        resp.setTranslation(translatedText);
-        resp.setPhonetic(""); // 简化版：暂不查音标库
-        resp.setPartOfSpeech(""); // 简化版：暂不识别词性
+        resp.setTranslation(translation);
+        resp.setPhonetic(dictWord != null && dictWord.getPhoneticUs() != null ? dictWord.getPhoneticUs() : "");
+        resp.setPartOfSpeech(dictWord != null && dictWord.getPartOfSpeech() != null ? dictWord.getPartOfSpeech() : "");
         resp.setAddedToWordbook(wordRecordId != null);
         resp.setWordRecordId(wordRecordId);
 
         log.info("Word lookup: user={}, word='{}', translation='{}', added={}",
-                userId, text, translatedText, wordRecordId != null);
+                userId, text, translation, wordRecordId != null);
         return resp;
     }
 
     /**
-     * 调用 translate-service 翻译文本
+     * DeepSeek 英译中
+     *
+     * @param userId 用户 ID（非空时计入 translate 每日配额；文章翻译已全局缓存故传 null）
      */
-    private String callTranslate(String text) {
-        try {
-            // TranslateRequest 字段: text, from, to
-            Map<String, String> reqBody = new HashMap<>();
-            reqBody.put("text", text);
-            reqBody.put("from", "en");
-            reqBody.put("to", "zh");
-
-            String url = translateServiceUrl + "/translate/text";
-            Map<String, Object> result = restTemplate.postForObject(url, reqBody, Map.class);
-
-            if (result != null) {
-                // TranslateResponse 结构: { sourceText, translatedText, from, to }
-                Object data = result.get("data");
-                if (data instanceof Map<?, ?> dataMap) {
-                    Object translated = dataMap.get("translatedText");
-                    if (translated != null) return translated.toString();
-                }
-                // 兼容直接返回字符串的场景
-                Object translated = result.get("translatedText");
-                if (translated != null) return translated.toString();
-            }
-        } catch (Exception e) {
-            log.warn("Translate service call failed for '{}': {}", text, e.getMessage());
-        }
-        return text + "（翻译服务暂不可用）";
+    private String translateEnToCn(String text, Long userId) {
+        return deepSeekClient.chat(TRANSLATE_PROMPT, text, userId, userId != null ? "translate" : null);
     }
 
     // ==================== 学习闭环：基于学习单词推荐文章 ====================

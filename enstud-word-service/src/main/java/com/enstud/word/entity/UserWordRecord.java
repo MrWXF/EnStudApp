@@ -16,6 +16,7 @@ public class UserWordRecord {
     private Long userId;
     private Long wordId;
     private Double easeFactor;
+    @TableField("`interval`")
     private Integer reviewInterval;
     private Integer repetitions;
     private Integer quality;

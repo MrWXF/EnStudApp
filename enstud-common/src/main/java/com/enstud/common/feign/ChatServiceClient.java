@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  * 对话服务 Feign 客户端
  */
-@FeignClient(name = "enstud-chat-service", contextId = "chatServiceClient")
+@FeignClient(name = "enstud-ai-service", contextId = "chatServiceClient")
 public interface ChatServiceClient {
 
     @GetMapping("/chat/internal/stats/{userId}")

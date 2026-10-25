@@ -22,7 +22,7 @@ public class UserWordRecord {
 
     private Double easeFactor;
 
-    @TableField("interval")
+    @TableField("`interval`")
     private Integer reviewInterval;
 
     private Integer repetitions;

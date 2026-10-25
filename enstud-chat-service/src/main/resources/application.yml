@@ -17,3 +17,14 @@ knife4j:
 logging:
   level:
     com.enstud.translate: DEBUG
+
+# AI 配置（true=Mock 客户端，false/缺省=DeepSeek 真实客户端）
+ai:
+  mock: false
+
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+  model: deepseek-chat
+  timeout: 60
+

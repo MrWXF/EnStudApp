@@ -10,7 +10,7 @@ import java.util.Map;
 /**
  * 阅读服务 Feign 客户端
  */
-@FeignClient(name = "enstud-read-service", contextId = "readServiceClient")
+@FeignClient(name = "enstud-content-service", contextId = "readServiceClient")
 public interface ReadServiceClient {
 
     @GetMapping("/read/internal/stats/{userId}")

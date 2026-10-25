@@ -1,6 +1,7 @@
 package com.enstud.word.service;
 
 import com.enstud.word.dto.AddWordFromReadingRequest;
+import com.enstud.word.dto.LearningWordDTO;
 import com.enstud.word.dto.MemoryLevelDistributionDTO;
 import com.enstud.word.dto.WordCardDTO;
 import com.enstud.word.dto.WordStatsDTO;
@@ -40,4 +41,13 @@ public interface WordService {
      * @return 单词记录ID
      */
     Long addWordFromReading(Long userId, AddWordFromReadingRequest request);
+
+    /**
+     * 获取用户正在学习（未掌握）的单词
+     *
+     * @param userId 用户ID
+     * @param limit  数量上限
+     * @return 正在学习中的单词列表（按最近更新时间倒序）
+     */
+    List<LearningWordDTO> getLearningWords(Long userId, int limit);
 }

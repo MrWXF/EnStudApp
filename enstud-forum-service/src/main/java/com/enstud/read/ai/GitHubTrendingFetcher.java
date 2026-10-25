@@ -26,8 +26,8 @@ import java.util.List;
 public class GitHubTrendingFetcher implements ArticleFetcher {
 
     private static final Logger log = LoggerFactory.getLogger(GitHubTrendingFetcher.class);
-    // 用 GitHub 搜索 API 获取近一周 Stars 增长最多的仓库
-    private static final String SEARCH_API = "https://api.github.com/search/repositories?q=created:>%s&sort=stars&order=desc&per_page=25";
+    // 用 GitHub 搜索 API 获取近一周 Stars 增长最多的仓库（> 需 URL 编码为 %3E，否则 URI.create 抛 IllegalArgument）
+    private static final String SEARCH_API = "https://api.github.com/search/repositories?q=created:%%3E%s&sort=stars&order=desc&per_page=25";
 
     private final HttpClient httpClient;
     private final ObjectMapper objectMapper;

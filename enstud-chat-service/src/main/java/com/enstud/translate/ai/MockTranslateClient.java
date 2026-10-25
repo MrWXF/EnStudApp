@@ -1,8 +1,15 @@
 package com.enstud.translate.ai;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
+/**
+ * Mock 翻译客户端（联调用）
+ * <p>
+ * 仅在 {@code ai.mock=true} 时生效；默认使用 {@link DeepSeekTranslateClient}。
+ */
 @Component
+@ConditionalOnProperty(name = "ai.mock", havingValue = "true")
 public class MockTranslateClient implements TranslateClient {
 
     @Override
