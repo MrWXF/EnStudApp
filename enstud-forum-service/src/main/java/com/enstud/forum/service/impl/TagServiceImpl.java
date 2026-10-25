@@ -143,4 +143,30 @@ public class TagServiceImpl implements TagService {
 
         return tag.getId();
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void removeTagsOfPost(Long postId) {
+        List<ForumPostTag> postTags = postTagMapper.selectList(
+                new LambdaQueryWrapper<ForumPostTag>()
+                        .eq(ForumPostTag::getPostId, postId)
+        );
+        if (postTags.isEmpty()) {
+            return;
+        }
+
+        for (ForumPostTag pt : postTags) {
+            ForumTag tag = tagMapper.selectById(pt.getTagId());
+            if (tag != null && tag.getPostCount() > 0) {
+                tag.setPostCount(tag.getPostCount() - 1);
+                tagMapper.updateById(tag);
+            }
+            postTagMapper.delete(
+                    new LambdaQueryWrapper<ForumPostTag>()
+                            .eq(ForumPostTag::getPostId, postId)
+                            .eq(ForumPostTag::getTagId, pt.getTagId())
+            );
+        }
+        log.info("已移除帖子标签关联: postId={}, 关联数={}", postId, postTags.size());
+    }
 }

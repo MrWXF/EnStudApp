@@ -9,6 +9,7 @@ import com.enstud.forum.entity.*;
 import com.enstud.forum.mapper.*;
 import com.enstud.forum.service.ForumSensitiveService;
 import com.enstud.forum.service.ForumService;
+import com.enstud.forum.service.TagService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,16 +31,19 @@ public class ForumServiceImpl implements ForumService {
     private final ForumLikeMapper likeMapper;
     private final UserClient userClient;
     private final ForumSensitiveService sensitiveService;
+    private final TagService tagService;
 
     public ForumServiceImpl(ForumCategoryMapper categoryMapper, ForumPostMapper postMapper,
                             ForumReplyMapper replyMapper, ForumLikeMapper likeMapper,
-                            UserClient userClient, ForumSensitiveService sensitiveService) {
+                            UserClient userClient, ForumSensitiveService sensitiveService,
+                            TagService tagService) {
         this.categoryMapper = categoryMapper;
         this.postMapper = postMapper;
         this.replyMapper = replyMapper;
         this.likeMapper = likeMapper;
         this.userClient = userClient;
         this.sensitiveService = sensitiveService;
+        this.tagService = tagService;
     }
 
     @Override
@@ -129,6 +133,18 @@ public class ForumServiceImpl implements ForumService {
         postMapper.insert(post);
         log.info("帖子发布成功, postId={}, userId={}", post.getId(), userId);
 
+        // 解析标签字符串并写入标签关联表（逗号/中文逗号分隔，最多 5 个）
+        if (request.tags() != null && !request.tags().isBlank()) {
+            List<String> tagNames = java.util.Arrays.stream(request.tags().split("[,，]"))
+                    .map(String::trim)
+                    .filter(s -> !s.isEmpty() && s.length() <= 20)
+                    .limit(5)
+                    .toList();
+            if (!tagNames.isEmpty()) {
+                tagService.addTagsToPost(post.getId(), tagNames);
+            }
+        }
+
         return new PostDTO(post.getId(), post.getTitle(), post.getSummary(),
                 userId, userClient.getUserName(userId), request.categoryId(), cat.getName(),
                 request.tags(), 0, 0, 0, false, false, post.getCreatedAt());
@@ -139,6 +155,7 @@ public class ForumServiceImpl implements ForumService {
         ForumPost post = postMapper.selectById(postId);
         if (post == null) throw new BusinessException(ErrorCode.POST_NOT_FOUND);
         if (!post.getAuthorId().equals(userId)) throw new BusinessException(ErrorCode.FORBIDDEN, "只能删除自己的帖子");
+        tagService.removeTagsOfPost(postId);
         postMapper.deleteById(postId);
         log.info("帖子已删除, postId={}, userId={}", postId, userId);
     }

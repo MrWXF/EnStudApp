@@ -19,7 +19,8 @@ public class UserClient {
 
     private final RestTemplate restTemplate;
 
-    @Value("${enstud.services.user-url:http://localhost:8081}")
+    /** 与 StatsClient 等保持一致：compose 通过 SERVICE_USER 注入，容器内解析到 enstud-user-service */
+    @Value("${service.user:http://localhost:8081}")
     private String userServiceUrl;
 
     /**

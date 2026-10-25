@@ -26,6 +26,11 @@ public interface TagService {
     void addTagsToPost(Long postId, List<String> tagNames);
 
     /**
+     * 删除帖子的全部标签关联（并回减标签帖子计数），用于删帖时清理
+     */
+    void removeTagsOfPost(Long postId);
+
+    /**
      * 根据标签名查找或创建标签
      */
     Long findOrCreateTag(String tagName);
